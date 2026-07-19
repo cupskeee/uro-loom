@@ -68,3 +68,25 @@ test('observe: browse worlds → campaign → roster / state / chronicle', async
   await expect(page.getByTestId('roster-panel')).toBeVisible()
   await expect(page.getByText('actor_wren')).toBeVisible()
 })
+
+test('play: an intent streams a beat; table-talk stays on the non-canon lane', async ({ page }) => {
+  await connect(page)
+  await page.goto('/campaigns/cmp_ashfall/play')
+
+  await expect(page.getByTestId('play-panel')).toBeVisible()
+  // The socket opens → the intent box enables.
+  await expect(page.getByTestId('intent-input')).toBeEnabled({ timeout: 10_000 })
+
+  // Send an intent → a beat entry appears and its narration streams to completion.
+  await page.getByTestId('intent-input').fill('look around the tavern')
+  await page.getByTestId('intent-send').click()
+  await expect(page.getByTestId('beat-entry')).toBeVisible()
+  await expect(page.getByText(/Shadows lengthen/)).toBeVisible({ timeout: 10_000 })
+
+  // Table-talk lands on the non-canon lane (a talk entry), never as a beat.
+  await page.getByTestId('talk-input').fill('meta: brb')
+  await page.getByTestId('talk-send').click()
+  const talk = page.getByTestId('talk-entry')
+  await expect(talk).toBeVisible()
+  await expect(talk).toContainText('meta: brb')
+})

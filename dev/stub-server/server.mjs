@@ -4,6 +4,7 @@
 // with a real `uro serve` for real data.
 
 import { createServer } from 'node:http'
+import { createHash } from 'node:crypto'
 
 const PORT = Number(process.env.PORT ?? 8787)
 
@@ -219,6 +220,146 @@ const server = createServer((req, res) => {
   if (p === '/usage') return send(res, 501, { detail: 'not supported by this server' })
 
   return send(res, 404, { detail: 'not found' })
+})
+
+// ---- Minimal WebSocket (RFC 6455) for the /play channel ------------------------
+// Hand-rolled so the stub stays zero-dependency and Dockerizable (server.mjs only).
+
+const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
+
+function wsEncode(str) {
+  const payload = Buffer.from(str, 'utf8')
+  const len = payload.length
+  let header
+  if (len < 126) {
+    header = Buffer.from([0x81, len])
+  } else if (len < 65536) {
+    header = Buffer.alloc(4)
+    header[0] = 0x81
+    header[1] = 126
+    header.writeUInt16BE(len, 2)
+  } else {
+    header = Buffer.alloc(10)
+    header[0] = 0x81
+    header[1] = 127
+    header.writeBigUInt64BE(BigInt(len), 2)
+  }
+  return Buffer.concat([header, payload])
+}
+
+function wsClose(code) {
+  const body = Buffer.alloc(2)
+  body.writeUInt16BE(code, 0)
+  return Buffer.concat([Buffer.from([0x88, 0x02]), body])
+}
+
+// Decode one frame from a buffer; null if incomplete. Handles client masking.
+function wsDecode(buf) {
+  if (buf.length < 2) return null
+  const opcode = buf[0] & 0x0f
+  const masked = (buf[1] & 0x80) !== 0
+  let len = buf[1] & 0x7f
+  let offset = 2
+  if (len === 126) {
+    if (buf.length < 4) return null
+    len = buf.readUInt16BE(2)
+    offset = 4
+  } else if (len === 127) {
+    if (buf.length < 10) return null
+    len = Number(buf.readBigUInt64BE(2))
+    offset = 10
+  }
+  let mask
+  if (masked) {
+    if (buf.length < offset + 4) return null
+    mask = buf.subarray(offset, offset + 4)
+    offset += 4
+  }
+  if (buf.length < offset + len) return null
+  const out = Buffer.alloc(len)
+  for (let i = 0; i < len; i++) out[i] = masked ? buf[offset + i] ^ mask[i % 4] : buf[offset + i]
+  return { opcode, text: out.toString('utf8'), bytesUsed: offset + len }
+}
+
+function simulateBeat(send, participant, text) {
+  if (!text.trim()) return
+  send({ type: 'beat_started', participant_id: participant, intent: text })
+  const narration = `The world responds to "${text}". Shadows lengthen along the wall; somewhere behind you, a door clicks shut.`
+  const words = narration.split(' ')
+  const chunks = []
+  for (let i = 0; i < words.length; i += 4) chunks.push(words.slice(i, i + 4).join(' ') + ' ')
+  let i = 0
+  const tick = () => {
+    if (i < chunks.length) {
+      send({ type: 'narration_chunk', participant_id: participant, text: chunks[i] })
+      i += 1
+      setTimeout(tick, 90)
+    } else {
+      send({ type: 'beat_committed', participant_id: participant, intent: text, narration })
+    }
+  }
+  setTimeout(tick, 60)
+}
+
+server.on('upgrade', (req, socket) => {
+  const url = new URL(req.url, `http://${req.headers.host}`)
+  const m = url.pathname.match(/^\/campaigns\/([^/]+)\/play$/)
+  const key = req.headers['sec-websocket-key']
+  if (!m || !key) {
+    socket.destroy()
+    return
+  }
+  const accept = createHash('sha1')
+    .update(key + WS_GUID)
+    .digest('base64')
+  socket.write(
+    'HTTP/1.1 101 Switching Protocols\r\n' +
+      'Upgrade: websocket\r\n' +
+      'Connection: Upgrade\r\n' +
+      `Sec-WebSocket-Accept: ${accept}\r\n\r\n`,
+  )
+
+  const send = (obj) => socket.write(wsEncode(JSON.stringify(obj)))
+  const closeWith = (code) => {
+    socket.write(wsClose(code))
+    socket.end()
+  }
+
+  const token = url.searchParams.get('token')
+  const campaignId = decodeURIComponent(m[1])
+  if (!token) return closeWith(4401)
+  if (!CAMPAIGNS.find((c) => c.campaign_id === campaignId)) return closeWith(4404)
+
+  const participant = `participant_${token}`
+  send({ type: 'participant_joined', participant_id: participant })
+
+  let buf = Buffer.alloc(0)
+  socket.on('data', (data) => {
+    buf = Buffer.concat([buf, data])
+    let frame
+    while ((frame = wsDecode(buf)) !== null) {
+      buf = buf.subarray(frame.bytesUsed)
+      if (frame.opcode === 0x8) {
+        socket.end()
+        return
+      }
+      if (frame.opcode !== 0x1) continue // ignore ping/pong/binary
+      let msg
+      try {
+        msg = JSON.parse(frame.text)
+      } catch {
+        continue
+      }
+      if (msg.type === 'intent') simulateBeat(send, participant, String(msg.text ?? ''))
+      else if (msg.type === 'table_talk') {
+        const t = String(msg.text ?? '')
+        if (t.trim()) send({ type: 'table_talk', participant_id: participant, text: t })
+      } else if (msg.type === 'vote') {
+        send({ type: 'vote_unsupported', participant_id: participant })
+      }
+    }
+  })
+  socket.on('error', () => {})
 })
 
 server.listen(PORT, () => {

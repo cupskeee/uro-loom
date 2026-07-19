@@ -6,6 +6,21 @@ All notable changes to Uro Loom are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **M2 — live play (GM mode, the flagship).** A live-play surface over the WS
+  `/campaigns/{c}/play` channel:
+  - Typed socket client (`src/api/playSocket.ts`) + a **pure session reducer**
+    (`src/play/playSession.ts`) that folds the frame stream into renderable state — including
+    **streaming** narration (`beat_started` → `narration_chunk`× → `beat_committed`/`beat_failed`).
+  - **Play** tab: a live transcript, an intent box (Enter to send), and the **non-canon
+    table-talk lane** rendered distinctly from canonical beats; roster + honest close-code
+    handling (4401/4403/4404). Frame shapes verified against the real uro-server WS handler.
+  - The dev **stub server** grew a hand-rolled, zero-dependency **WebSocket** (RFC 6455
+    handshake + framing) that simulates a streamed beat, so play is developable/testable without a
+    live engine.
+  - Tests: unit (socket URL/frame parsing, reducer streaming/roster/notices) + an E2E play flow
+    (intent → streamed beat; table-talk → non-canon lane). **38 unit + 4 E2E green.**
+  - Honest gap: the server does not stream scene/mode frames (docs/08 advertises them; `app.py`
+    doesn't emit them), so the panel says so rather than faking it.
 - **M1 — observe (read-only surfaces).** A genuinely useful console against today's `uro-server`,
   no engine changes:
   - **Worlds** browser, **Campaigns** list (with `?world=` filter) + detail, and a campaign

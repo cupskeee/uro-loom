@@ -6,6 +6,7 @@ import { WorldsPage } from './pages/WorldsPage'
 import { CampaignsPage } from './pages/CampaignsPage'
 import { CampaignDetailPage } from './pages/CampaignDetailPage'
 import { OverviewPanel } from './pages/panels/OverviewPanel'
+import { PlayPanel } from './pages/panels/PlayPanel'
 import { RosterPanel } from './pages/panels/RosterPanel'
 import { StatePanel } from './pages/panels/StatePanel'
 import { ChroniclePanel } from './pages/panels/ChroniclePanel'
@@ -26,6 +27,7 @@ export function App() {
         <Route path="campaigns" element={<CampaignsPage />} />
         <Route path="campaigns/:campaignId" element={<CampaignDetailPage />}>
           <Route index element={<OverviewPanel />} />
+          <Route path="play" element={<PlayPanel />} />
           <Route path="roster" element={<RosterPanel />} />
           <Route path="state" element={<StatePanel />} />
           <Route path="chronicle" element={<ChroniclePanel />} />

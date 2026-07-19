@@ -40,6 +40,9 @@ export function CampaignDetailPage() {
         <NavLink to="." end className={tab}>
           Overview
         </NavLink>
+        <NavLink to="play" className={tab}>
+          Play
+        </NavLink>
         <NavLink to="roster" className={tab}>
           Roster
         </NavLink>

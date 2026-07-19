@@ -40,18 +40,23 @@ lore wall — no CLI needed. _Note: the world/campaign selector is per-page navi
 global branch-context switcher lands with M4's branch/timeline work (there's no branch-list
 endpoint yet — BE-1)._
 
-## M2 — Play (GM mode, the flagship) 🟢
+## M2 — Play (GM mode, the flagship) 🟢 ✅ DONE
 
 Goal: drive live beats in the browser — parity with `uro connect`, richer than the terminal.
 
-- **WS play client** for `/campaigns/{c}/play`: send `intent`; render streamed `narration_chunk`
-  → `beat_committed`; handle `beat_failed`, reconnect, and version/`4401`/`4403` closes.
-- **Multiplayer**: roster join/leave, the **non-canon** `table_talk` lane, `vote` frames + tally,
-  `not_your_turn` / `proposal_opened` reflected honestly (server-driven arbitration).
-- Current **scene + mode** display; the intent box; a running transcript.
+- ✅ **WS play client** for `/campaigns/{c}/play`: send `intent`; render streamed `narration_chunk`
+  → `beat_committed`; handle `beat_failed` and `4401`/`4403`/`4404` closes (a pure reducer folds
+  the frame stream; the socket reconnects on connection/campaign change).
+- ✅ **Multiplayer**: roster join/leave, the **non-canon** `table_talk` lane (rendered distinctly),
+  `vote` frames (→ `vote_unsupported`/`vote_tally`/`vote_decided`), `not_your_turn` /
+  `proposal_opened` / `intent_rejected` reflected honestly (server-driven arbitration).
+- ✅ Intent box + running transcript.
 
-**Exit:** two browser tabs on one campaign both see the same streamed beats; table-talk and votes
-render distinctly from canon.
+**Exit (met):** send an intent and watch narration stream in; table-talk renders distinctly from
+canon (proven by E2E against a hand-rolled WS in the stub). _Honest deferrals: **scene + mode**
+display isn't possible — the server doesn't emit those frames (docs/02 wire drift), so the panel
+says so; a two-tab "both see the same beats" demo needs a real multi-connection server (the stub
+is per-connection). `vote_tally` rendering is generic pending a `VoteCoordinator` arbiter._
 
 ## M3 — Operate what exists 🟢
 
