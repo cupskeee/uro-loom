@@ -25,17 +25,20 @@ Goal: a running SPA skeleton that authenticates to a `uro serve` and reads `/hea
 
 **Exit:** `pnpm dev`, enter a server URL + token, see green health + engine/API version.
 
-## M1 — Observe (read-only, ships against today's server) 🟢
+## M1 — Observe (read-only, ships against today's server) 🟢 ✅ DONE
 
 Goal: a genuinely useful read-only console with **zero engine changes**.
 
-- **World Browser** (`GET /worlds`) and **Campaign list/detail** (`GET /campaigns`, `/{c}`).
-- **Roster** (`GET …/roster`), **State** (`GET …/state`), **Chronicle** (`GET …/chronicle`).
-- From `state`, render first-cut **Actors**, **Places**, **Threads** panels.
-- Global **branch/campaign context** chrome.
+- ✅ **World Browser** (`GET /worlds`) and **Campaign list/detail** (`GET /campaigns`, `/{c}`).
+- ✅ **Roster** (`GET …/roster`), **State** (`GET …/state`), **Chronicle** (`GET …/chronicle`).
+- ✅ From `state`, **Actors / Places / Threads / Factions** panels (all four sections).
+- ✅ Campaign workspace with deep-linkable tabs; a reusable `<QueryBoundary>` (loading/error/empty
+  + 501 graceful-degradation). Wire types verified against the real uro-core models.
 
-**Exit:** point Loom at a seeded world and browse its campaigns, roster, current state, and lore
-wall — no CLI needed.
+**Exit (met):** point Loom at a seeded world and browse its campaigns, roster, current state, and
+lore wall — no CLI needed. _Note: the world/campaign selector is per-page navigation; a persistent
+global branch-context switcher lands with M4's branch/timeline work (there's no branch-list
+endpoint yet — BE-1)._
 
 ## M2 — Play (GM mode, the flagship) 🟢
 

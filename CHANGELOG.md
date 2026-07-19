@@ -6,6 +6,18 @@ All notable changes to Uro Loom are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **M1 — observe (read-only surfaces).** A genuinely useful console against today's `uro-server`,
+  no engine changes:
+  - **Worlds** browser, **Campaigns** list (with `?world=` filter) + detail, and a campaign
+    workspace with deep-linkable tabs: **Overview**, **Roster**, **State**, **Chronicle**.
+  - **State** renders the four projections — actors (tier / role / aliases / status), places
+    (kind / status), threads (state / provenance), factions — with status/provenance badges.
+  - **Chronicle** renders narrated beats (oldest-first); **Roster** lists bound PC actor ids.
+  - Wire types verified against the real uro-core models + projection SQL (not docs/08 —
+    avoiding the known wire drift). A reusable `<QueryBoundary>` gives uniform loading / error /
+    empty handling and the 501 "not supported by this server" graceful-degradation path.
+  - Routing (React Router), query hooks (TanStack Query), the stub server extended with realistic
+    sample data, plus unit tests (endpoint URLs, QueryBoundary degradation) and an E2E browse flow.
 - **M0 — foundations (LD-2 stack accepted: React + Vite + TS).** The app skeleton:
   - Typed `uro-server` API client (`src/api/`) — a single `apiFetch` choke point mapping HTTP
     status to typed errors, incl. **501 → `UnsupportedByServerError`** (the graceful "not

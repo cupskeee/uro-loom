@@ -6,10 +6,11 @@ Uro Loom is the graphical front-of-house for Uro: browse worlds and timelines, i
 event log and the epistemic layer, drive live play sessions, and perform every management
 operation the `uro` reference CLI can — from a browser instead of a terminal.
 
-> **Status: M0 (foundations).** The app skeleton is up — a typed `uro-server` API client
-> (with graceful 401/404/501 handling), a connection/auth screen, a health check, a dev stub
-> server, and CI (lint · typecheck · unit · E2E). No feature surfaces yet — M1 (observe) is next.
-> See [`docs/04-plan.md`](docs/04-plan.md).
+> **Status: M1 (observe) — read-only surfaces live.** On top of the M0 foundation, Loom now
+> browses **worlds**, **campaigns** (list + detail), and per-campaign **roster**, **state**
+> (actors / places / threads / factions), and **chronicle** — all against today's `uro-server`
+> with zero engine changes. Response shapes are verified against the real uro-core models. Next:
+> M2 (live play over the WS channel). See [`docs/04-plan.md`](docs/04-plan.md).
 
 ---
 
