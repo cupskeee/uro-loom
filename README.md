@@ -1,0 +1,87 @@
+# Uro Loom
+
+**A web console for operating a [Uro](https://github.com/cupskeee/uro) world-state engine instance.**
+
+Uro Loom is the graphical front-of-house for Uro: browse worlds and timelines, inspect the
+event log and the epistemic layer, drive live play sessions, and perform every management
+operation the `uro` reference CLI can — from a browser instead of a terminal.
+
+> **Status: PLANNING / SCAFFOLD.** This repo currently contains design docs and an
+> implementation plan — no application code yet. See [`docs/04-plan.md`](docs/04-plan.md).
+
+---
+
+## Why a separate repo
+
+Uro is, by its own charter, a **headless, game-agnostic world-state engine** — *"games and
+platforms are consumers, not what Uro is."* Its vision doc explicitly lists *"graphical
+world-builder UIs"* and *"frontends of any kind beyond the reference CLI"* as **out of scope**
+for the engine. A web console is definitionally one of those consumers.
+
+So Uro Loom lives outside the engine repo on purpose. It is a **pure network client** of
+`uro-server`'s HTTP + WebSocket API. It never imports `uro-core`, never opens a Postgres
+connection, never runs a migration. Its only coupling to Uro is the **wire contract**, which it
+pins and tracks like any external integration. This keeps the engine's API *the* contract and
+keeps Loom free to iterate on its own release cadence, its own toolchain (TypeScript/Node), and
+its own concerns the engine deliberately refuses to own — accounts, dashboards, usage/billing UI.
+
+See [`docs/00-vision.md`](docs/00-vision.md) for the full boundary, and the parent repo's
+`docs/00` / `docs/08` for the engine's side of it.
+
+## Relationship to Uro
+
+```
+┌─────────────┐   HTTP (REST management surface)     ┌──────────────┐        ┌────────────┐
+│  Uro Loom   │ ───────────────────────────────────▶ │  uro-server  │ ─────▶ │  Postgres  │
+│ (this repo) │ ◀─────────────────────────────────── │ (FastAPI     │        │ + pgvector │
+│  browser    │   WebSocket (/campaigns/{c}/play)     │  shell over  │        └────────────┘
+│  SPA        │                                       │  uro-core)   │
+└─────────────┘                                       └──────────────┘
+     owns: identity/accounts, UX,        owns: the engine, events, projections,
+     dashboards, session UX, guardrails   auth tokens, the wire contract
+```
+
+Loom talks **only** to `uro-server`. It is a **GM-mode client** (it submits intents; the engine
+runs the beat pipeline and streams narration) — it is *not* an external resolver, and it cannot
+edit world state directly (everything is an event; reads are of rebuildable projections).
+
+## Feature parity with `uro-cli`
+
+Loom's north star is: **anything you can do with the `uro` CLI, you can do in Loom.** The full
+26-command → console-surface mapping — including the honest gap analysis of which commands have a
+server endpoint *today* vs. which require new endpoints in `uro-server` — is in
+[`docs/02-feature-parity.md`](docs/02-feature-parity.md).
+
+The headline: ~11 of 26 CLI commands are already reachable over the existing API; the rest
+(branch ops, world authoring, dry-run, consistency, codex, export/import) are CLI-only and need
+`uro-server` to grow the deferred `docs/08` REST surface. **Full CLI parity is therefore a
+two-repo effort** — Loom + a companion endpoints workstream in Uro. The plan sequences Loom
+around what ships today first.
+
+## Documentation
+
+| Doc | What it covers |
+|-----|----------------|
+| [`docs/00-vision.md`](docs/00-vision.md) | What Loom is and is **not**; the consumer-stance boundary |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | Client architecture, the wire contract, auth strategy, proposed stack |
+| [`docs/02-feature-parity.md`](docs/02-feature-parity.md) | The 26-command CLI → console matrix + backend gap map |
+| [`docs/03-surfaces.md`](docs/03-surfaces.md) | The UI surfaces (screens) derived from the domain model |
+| [`docs/04-plan.md`](docs/04-plan.md) | The phased implementation plan (M0–M6) + backend co-evolution |
+| [`docs/decisions.md`](docs/decisions.md) | Decision log (LD-1…), mirroring Uro's `decisions.md` discipline |
+
+## Quickstart
+
+_Not yet — there is no app to run. Once M0 lands this section will cover `pnpm install` /
+`pnpm dev` and pointing Loom at a running `uro serve`._ Until then, to stand up the engine Loom
+will target:
+
+```sh
+# in the uro repo
+docker compose up -d --wait          # Postgres + pgvector on host port 5433
+uv run uro db migrate
+uv run uro serve --token dev=player-1 # a token-auth server for Loom to connect to
+```
+
+## License
+
+MIT © 2026 cupskeee — same as the engine.
