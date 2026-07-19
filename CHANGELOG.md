@@ -6,6 +6,18 @@ All notable changes to Uro Loom are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **M3 — operate (lifecycle writes that already have endpoints).** Every 🟢 write surface:
+  - **New World** (Worlds page) and **New Campaign** (Campaigns page, with a world picker) forms.
+  - A campaign **Manage** tab: **Join**, **Mint / Revoke token**, **Time-skip**, and a **Chronicler
+    outcome submitter** (builds a valid `OutcomeBundle` — `encounter_id` from the path, feats/
+    casualties, `extra='forbid'`-safe).
+  - Data layer: typed POST endpoints + TanStack `useMutation` hooks that invalidate the affected
+    read queries; a shared `errorMessage()` that surfaces the server's `{detail}`; small form
+    primitives. Request bodies verified against the real uro-server handlers.
+  - The dev **stub server** grew POST handlers for all seven write endpoints (in-memory), so
+    operate is developable/testable without a live engine.
+  - Tests: unit (outcome-bundle builder, write-endpoint URLs/bodies/method, `errorMessage`) + an
+    E2E operate flow (create world → appears; mint token; time-skip). **49 unit + 5 E2E green.**
 - **M2 — live play (GM mode, the flagship).** A live-play surface over the WS
   `/campaigns/{c}/play` channel:
   - Typed socket client (`src/api/playSocket.ts`) + a **pure session reducer**

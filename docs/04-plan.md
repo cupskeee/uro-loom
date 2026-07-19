@@ -58,17 +58,22 @@ display isn't possible — the server doesn't emit those frames (docs/02 wire dr
 says so; a two-tab "both see the same beats" demo needs a real multi-connection server (the stub
 is per-connection). `vote_tally` rendering is generic pending a `VoteCoordinator` arbiter._
 
-## M3 — Operate what exists 🟢
+## M3 — Operate what exists 🟢 ✅ DONE
 
 Goal: the lifecycle writes that already have endpoints.
 
-- **New Campaign** (`POST /worlds/{w}/campaigns`, adopt/fresh PC) · **Join** (`…/join`).
-- **New World** (`POST /worlds`, JSON body) + compose a default campaign.
-- **Token** mint/revoke (`…/tokens`, `…/tokens/revoke`) with self/admin scope.
-- **Time-Skip** (`…/time-skip`) · **Chronicler Outcome Submitter** (`…/encounters/{e}/outcome`).
+- ✅ **New Campaign** (`POST /worlds/{w}/campaigns`, fresh/adopt PC + seed) · **Join** (`…/join`).
+- ✅ **New World** (`POST /worlds`) — a form on the Worlds page (compose-a-campaign is a one-click
+  follow-through link into the world-filtered New Campaign form, rather than an auto-created one).
+- ✅ **Token** mint/revoke (`…/tokens`, `…/tokens/revoke`) — self/admin scope enforced server-side.
+- ✅ **Time-Skip** (`…/time-skip`) · **Chronicler Outcome Submitter** (`…/encounters/{e}/outcome`,
+  builds a valid `OutcomeBundle`).
 
-**Exit:** an operator can create a world+campaign, seat players with tokens, run a session, skip
-time, and submit an external outcome — entirely in Loom.
+**Exit (met):** an operator can create a world + campaign, seat players with tokens, run a session,
+skip time, and submit an external outcome — entirely in Loom (proven by an E2E operate flow).
+_Deferred: `end_campaign` has no endpoint (it's a 🔴/BE item, not part of "operate what exists"); the
+outcome form covers participants/witnesses/casualties/one-feat/duration — loot + multi-feat extend
+the same pattern._
 
 > **After M3, Loom is independently valuable.** Everything past here needs the engine to grow
 > endpoints; those milestones interleave with the backend co-evolution workstream below.

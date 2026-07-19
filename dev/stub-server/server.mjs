@@ -168,6 +168,95 @@ function tokenFrom(req, url) {
   return url.searchParams.get('token')
 }
 
+let idCounter = 0
+function nextId(prefix) {
+  idCounter += 1
+  return `${prefix}_${idCounter}`
+}
+function slug(s) {
+  const out = String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  return out || 'x'
+}
+
+// Write endpoints (M3). Mutations are in-memory and live for the process lifetime.
+function handlePost(p, body, res) {
+  if (p === '/worlds') {
+    if (!body.name) return send(res, 400, { detail: "missing required field 'name'" })
+    const world = {
+      world_id: `wld_${slug(body.name)}`,
+      name: String(body.name),
+      main_branch_id: `br_${slug(body.name)}_main`,
+    }
+    if (!WORLDS.find((w) => w.world_id === world.world_id)) WORLDS.push(world)
+    return send(res, 200, world)
+  }
+
+  let m = p.match(/^\/worlds\/([^/]+)\/campaigns$/)
+  if (m) {
+    const world = WORLDS.find((w) => w.world_id === decodeURIComponent(m[1]))
+    if (!world) return send(res, 404, { detail: 'no such world' })
+    if (!body.participant) return send(res, 400, { detail: "missing required field 'participant'" })
+    const campaign = {
+      campaign_id: nextId('cmp'),
+      world_id: world.world_id,
+      branch_id: world.main_branch_id,
+      ruleset_id: '',
+      ruleset_version: '',
+      seed: Number(body.seed) || 0,
+    }
+    CAMPAIGNS.push(campaign)
+    return send(res, 200, { campaign_id: campaign.campaign_id, branch_id: campaign.branch_id })
+  }
+
+  m = p.match(/^\/campaigns\/([^/]+)\/join$/)
+  if (m) {
+    if (!body.participant) return send(res, 400, { detail: "missing required field 'participant'" })
+    return send(res, 200, { actor_id: `actor_${slug(body.participant)}`, token: nextId('tok') })
+  }
+
+  m = p.match(/^\/campaigns\/([^/]+)\/tokens\/revoke$/)
+  if (m) {
+    if (!body.token) return send(res, 400, { detail: "missing required field 'token'" })
+    return send(res, 200, { revoked: true })
+  }
+
+  m = p.match(/^\/campaigns\/([^/]+)\/tokens$/)
+  if (m) {
+    if (!body.participant) return send(res, 400, { detail: "missing required field 'participant'" })
+    return send(res, 200, { token: nextId('tok') })
+  }
+
+  m = p.match(/^\/campaigns\/([^/]+)\/time-skip$/)
+  if (m) {
+    const days = Number(body.days)
+    if (!Number.isInteger(days) || days <= 0) {
+      return send(res, 400, { detail: 'days must be a positive integer' })
+    }
+    return send(res, 200, { day: days, agenda_rules_fired: 0 })
+  }
+
+  m = p.match(/^\/campaigns\/([^/]+)\/encounters\/([^/]+)\/outcome$/)
+  if (m) {
+    const casualties = Array.isArray(body.casualties) ? body.casualties : []
+    const feats = Array.isArray(body.feats) ? body.feats : []
+    const receipt = [
+      ...casualties.map((ref) => ({ kind: 'casualty', ref, disposition: 'downgraded' })),
+      ...feats.map((f) => ({ kind: 'feat', ref: f.actor, disposition: 'applied' })),
+    ]
+    return send(res, 200, {
+      encounter_id: decodeURIComponent(m[2]),
+      commit_id: nextId('cmt'),
+      committed_events: receipt.length,
+      receipt,
+    })
+  }
+
+  return send(res, 404, { detail: 'not found' })
+}
+
 const server = createServer((req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, CORS)
@@ -184,6 +273,21 @@ const server = createServer((req, res) => {
   // Everything else requires a bearer token → 401 otherwise (mirrors `_auth`).
   const token = tokenFrom(req, url)
   if (!token) return send(res, 401, { detail: 'unauthorized' })
+
+  if (req.method === 'POST') {
+    const chunks = []
+    req.on('data', (c) => chunks.push(c))
+    req.on('end', () => {
+      let body
+      try {
+        body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+      } catch {
+        return send(res, 400, { detail: 'invalid json' })
+      }
+      handlePost(p, body, res)
+    })
+    return
+  }
 
   if (req.method === 'GET' && p === '/worlds') return send(res, 200, WORLDS)
 

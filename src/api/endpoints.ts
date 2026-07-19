@@ -7,9 +7,23 @@ import type {
   Campaign,
   CampaignState,
   ChronicleResponse,
+  CreateCampaignRequest,
+  CreateCampaignResponse,
+  CreateWorldRequest,
+  CreateWorldResponse,
   Health,
+  JoinCampaignRequest,
+  JoinCampaignResponse,
+  MintTokenRequest,
+  MintTokenResponse,
+  OutcomeBundle,
+  OutcomeResponse,
+  RevokeTokenRequest,
+  RevokeTokenResponse,
   RosterResponse,
   ServerInfo,
+  TimeSkipRequest,
+  TimeSkipResponse,
   World,
 } from './types'
 
@@ -78,4 +92,88 @@ export function getChronicle(
   return apiFetch<ChronicleResponse>(conn, `/campaigns/${enc(campaignId)}/chronicle${q}`, {
     signal,
   })
+}
+
+// ---- Writes (M3 operate) -------------------------------------------------------
+
+/** POST /worlds — create a world. */
+export function createWorld(
+  conn: Connection,
+  body: CreateWorldRequest,
+): Promise<CreateWorldResponse> {
+  return apiFetch<CreateWorldResponse>(conn, '/worlds', { method: 'POST', body })
+}
+
+/** POST /worlds/{world_id}/campaigns — start a campaign in a world. */
+export function createCampaign(
+  conn: Connection,
+  worldId: string,
+  body: CreateCampaignRequest,
+): Promise<CreateCampaignResponse> {
+  return apiFetch<CreateCampaignResponse>(conn, `/worlds/${enc(worldId)}/campaigns`, {
+    method: 'POST',
+    body,
+  })
+}
+
+/** POST /campaigns/{id}/join — seat a participant on a PC. */
+export function joinCampaign(
+  conn: Connection,
+  campaignId: string,
+  body: JoinCampaignRequest,
+): Promise<JoinCampaignResponse> {
+  return apiFetch<JoinCampaignResponse>(conn, `/campaigns/${enc(campaignId)}/join`, {
+    method: 'POST',
+    body,
+  })
+}
+
+/** POST /campaigns/{id}/tokens — mint a durable token for a seated participant. */
+export function mintToken(
+  conn: Connection,
+  campaignId: string,
+  body: MintTokenRequest,
+): Promise<MintTokenResponse> {
+  return apiFetch<MintTokenResponse>(conn, `/campaigns/${enc(campaignId)}/tokens`, {
+    method: 'POST',
+    body,
+  })
+}
+
+/** POST /campaigns/{id}/tokens/revoke — revoke a token. */
+export function revokeToken(
+  conn: Connection,
+  campaignId: string,
+  body: RevokeTokenRequest,
+): Promise<RevokeTokenResponse> {
+  return apiFetch<RevokeTokenResponse>(conn, `/campaigns/${enc(campaignId)}/tokens/revoke`, {
+    method: 'POST',
+    body,
+  })
+}
+
+/** POST /campaigns/{id}/time-skip — advance in-fiction time (+ agenda tick). */
+export function timeSkip(
+  conn: Connection,
+  campaignId: string,
+  body: TimeSkipRequest,
+): Promise<TimeSkipResponse> {
+  return apiFetch<TimeSkipResponse>(conn, `/campaigns/${enc(campaignId)}/time-skip`, {
+    method: 'POST',
+    body,
+  })
+}
+
+/** POST /campaigns/{id}/encounters/{encounter_id}/outcome — Chronicler ingest. */
+export function reportOutcome(
+  conn: Connection,
+  campaignId: string,
+  encounterId: string,
+  bundle: OutcomeBundle,
+): Promise<OutcomeResponse> {
+  return apiFetch<OutcomeResponse>(
+    conn,
+    `/campaigns/${enc(campaignId)}/encounters/${enc(encounterId)}/outcome`,
+    { method: 'POST', body: bundle },
+  )
 }

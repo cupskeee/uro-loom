@@ -6,12 +6,12 @@ Uro Loom is the graphical front-of-house for Uro: browse worlds and timelines, i
 event log and the epistemic layer, drive live play sessions, and perform every management
 operation the `uro` reference CLI can — from a browser instead of a terminal.
 
-> **Status: M2 (live play) — the flagship surface is live.** On top of observe (M1), Loom now
-> drives **live GM-mode play** over the WebSocket `/campaigns/{c}/play` channel: submit intents,
-> watch narration **stream** in, and use the **non-canon table-talk lane** — all rendered from the
-> real server frames. Plus M1's read surfaces (worlds, campaigns, roster, state, chronicle). Next:
-> M3 (operate — the lifecycle writes that already have endpoints). See
-> [`docs/04-plan.md`](docs/04-plan.md).
+> **Status: M3 (operate) — the "🟢 available today" tier is complete.** Loom now covers every
+> lifecycle write that already has an endpoint: **create world / campaign**, **join**, **mint /
+> revoke tokens**, **time-skip**, and **submit an external Chronicler outcome** — plus M2 live play
+> and M1's read surfaces. An operator can run an instance end-to-end from the browser, no CLI.
+> Next: **M4 (timelines & epistemics)**, which needs the backend co-evolution endpoints
+> (BE-1…BE-11) in the `uro` repo. See [`docs/04-plan.md`](docs/04-plan.md).
 
 ---
 

@@ -114,3 +114,86 @@ export interface BeatResolvedPayload {
 export interface ChronicleResponse {
   beats: BeatResolvedPayload[]
 }
+
+// ---- Write requests / responses (M3 operate) -----------------------------------
+
+/** POST /worlds. `tone` may be a string or list; the server normalizes. */
+export interface CreateWorldRequest {
+  name: string
+  tone?: string | string[]
+}
+export interface CreateWorldResponse {
+  world_id: string
+  main_branch_id: string
+  name: string
+}
+
+/** POST /worlds/{world_id}/campaigns. Supply either new_pc_name OR adopt_actor_id. */
+export interface CreateCampaignRequest {
+  participant: string
+  new_pc_name?: string
+  adopt_actor_id?: string
+  seed?: number
+}
+export interface CreateCampaignResponse {
+  campaign_id: string
+  branch_id: string
+}
+
+/** POST /campaigns/{id}/join. Returns the bound actor + (if enabled) a minted token. */
+export interface JoinCampaignRequest {
+  participant: string
+  new_pc_name?: string
+  adopt_actor_id?: string
+}
+export interface JoinCampaignResponse {
+  actor_id: string
+  token?: string
+}
+
+export interface MintTokenRequest {
+  participant: string
+}
+export interface MintTokenResponse {
+  token: string
+}
+
+export interface RevokeTokenRequest {
+  token: string
+}
+export interface RevokeTokenResponse {
+  revoked: boolean
+}
+
+export interface TimeSkipRequest {
+  days: number
+}
+/** Shape is engine-defined; rendered generically. */
+export type TimeSkipResponse = Record<string, unknown>
+
+/** A feat within an OutcomeBundle (extra='forbid' — exactly these keys). */
+export interface OutcomeFeat {
+  actor: string
+  description: string
+}
+export interface OutcomeLoot {
+  item_id: string
+  from_ref?: string
+  to_ref?: string
+}
+/**
+ * POST /campaigns/{id}/encounters/{encounter_id}/outcome — the OutcomeBundle v1.
+ * `encounter_id` comes from the URL path (do NOT include it here). `extra='forbid'`,
+ * so only these keys are allowed.
+ */
+export interface OutcomeBundle {
+  v?: number
+  participants?: string[]
+  witnesses?: string[]
+  casualties?: string[]
+  feats?: OutcomeFeat[]
+  loot?: OutcomeLoot[]
+  duration_rounds?: number
+}
+/** The distillation result; rendered generically (commit_id + receipt entries). */
+export type OutcomeResponse = Record<string, unknown>

@@ -69,6 +69,28 @@ test('observe: browse worlds → campaign → roster / state / chronicle', async
   await expect(page.getByText('actor_wren')).toBeVisible()
 })
 
+test('operate: create a world, then mint a token and time-skip a campaign', async ({ page }) => {
+  await connect(page)
+
+  // Create a world → it appears in the browser.
+  await page.getByTestId('new-world').click()
+  await page.getByTestId('world-name').fill('Testrealm')
+  await page.getByTestId('world-create-submit').click()
+  await expect(page.getByTestId('world-create-feedback')).toContainText('created')
+  await expect(page.getByText('Testrealm', { exact: true })).toBeVisible()
+
+  // Campaign management ops on an existing campaign.
+  await page.goto('/campaigns/cmp_ashfall/manage')
+  await expect(page.getByTestId('manage-panel')).toBeVisible()
+
+  await page.getByTestId('mint-participant').fill('player-9')
+  await page.getByTestId('mint-submit').click()
+  await expect(page.getByTestId('mint-feedback')).toContainText('token')
+
+  await page.getByTestId('timeskip-submit').click()
+  await expect(page.getByTestId('timeskip-feedback')).toContainText('done')
+})
+
 test('play: an intent streams a beat; table-talk stays on the non-canon lane', async ({ page }) => {
   await connect(page)
   await page.goto('/campaigns/cmp_ashfall/play')

@@ -10,6 +10,7 @@ import { PlayPanel } from './pages/panels/PlayPanel'
 import { RosterPanel } from './pages/panels/RosterPanel'
 import { StatePanel } from './pages/panels/StatePanel'
 import { ChroniclePanel } from './pages/panels/ChroniclePanel'
+import { ManagePanel } from './pages/panels/ManagePanel'
 
 export function App() {
   const { connection } = useConnection()
@@ -31,6 +32,7 @@ export function App() {
           <Route path="roster" element={<RosterPanel />} />
           <Route path="state" element={<StatePanel />} />
           <Route path="chronicle" element={<ChroniclePanel />} />
+          <Route path="manage" element={<ManagePanel />} />
         </Route>
         <Route path="*" element={<Navigate to="/worlds" replace />} />
       </Route>

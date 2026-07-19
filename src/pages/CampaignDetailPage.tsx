@@ -52,6 +52,9 @@ export function CampaignDetailPage() {
         <NavLink to="chronicle" className={tab}>
           Chronicle
         </NavLink>
+        <NavLink to="manage" className={tab}>
+          Manage
+        </NavLink>
       </nav>
 
       <Outlet />

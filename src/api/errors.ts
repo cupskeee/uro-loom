@@ -66,3 +66,17 @@ export class NetworkError extends Error {
 export function isUnsupported(err: unknown): err is UnsupportedByServerError {
   return err instanceof UnsupportedByServerError
 }
+
+/** A human-readable message, preferring the server's `{detail}` (FastAPI's error shape). */
+export function errorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    const body = err.body
+    if (body && typeof body === 'object' && 'detail' in body) {
+      const detail = (body as { detail: unknown }).detail
+      if (typeof detail === 'string') return detail
+    }
+    return err.message
+  }
+  if (err instanceof Error) return err.message
+  return String(err)
+}
