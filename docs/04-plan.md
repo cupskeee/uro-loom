@@ -122,23 +122,24 @@ Goal: what the engine deliberately refuses to own.
 ## Backend co-evolution (companion workstream in `uro`)
 
 Full CLI parity requires these endpoints in `uro-server` — mostly the **already-designed but
-deferred `docs/08` surface**. Track them as issues in the engine repo; Loom milestones depend on
-them as noted. **This is engine work, done in the engine repo via its branch→PR→review rhythm** —
+deferred `docs/08` surface**. **Tracked in the engine repo** under the epic
+[cupskeee/uro#44](https://github.com/cupskeee/uro/issues/44) (label `uro-loom`); each BE has its
+own issue below. **This is engine work, done in the engine repo via its branch→PR→review rhythm** —
 Loom only consumes the wire contract.
 
-| ID | Endpoint(s) | Feeds | Notes |
-|----|-------------|-------|-------|
-| BE-1 | `GET /worlds/{w}/branches` | M4 | deferred in docs/08 |
-| BE-2 | `POST /worlds/{w}/branches` (fork) | M4 | deferred |
-| BE-3 | commit **lineage/log** + marker create | M4 | new |
-| BE-4 | **events** read (filterable) + commit detail | M4 | new; the inspector's source |
-| BE-5 | `dry_run` beat + **consistency** read | M4 | preview + T2 proxy |
-| BE-6 | pack **upload** (multipart) + `validate` | M5 | `POST /worlds` is JSON-only today |
-| BE-7 | `backfill` / `probe` (LLM stages) | M5 | deferred; stream progress |
-| BE-8 | `seed`, world `export` / `import` over HTTP | M5 | deferred/scaffolded |
-| BE-9 | **campaign end**, **codex** add/list | M4/M5 | new |
-| BE-10 | `GET /usage`, world-scoped `state?at=` / `chronicle`, ruleset registry read | M6/M4 | metering + world-scope reads |
-| BE-11 | **WS envelope reconciliation** (add `campaign_id`/`beat_id`; the richer frame set docs/08 advertises) | M2/M4 | fixes the documented wire drift |
+| ID | Issue | Endpoint(s) | Feeds | Notes |
+|----|-------|-------------|-------|-------|
+| BE-1 | [#33](https://github.com/cupskeee/uro/issues/33) | `GET /worlds/{w}/branches` | M4 | deferred in docs/08 |
+| BE-2 | [#34](https://github.com/cupskeee/uro/issues/34) | `POST /worlds/{w}/branches` (fork) | M4 | deferred |
+| BE-3 | [#35](https://github.com/cupskeee/uro/issues/35) | commit **lineage/log** + marker create | M4 | new |
+| BE-4 | [#36](https://github.com/cupskeee/uro/issues/36) | **events** read (filterable) + commit detail | M4 | new; the inspector's source |
+| BE-5 | [#37](https://github.com/cupskeee/uro/issues/37) | `dry_run` beat + **consistency** read | M4 | preview + T2 proxy |
+| BE-6 | [#38](https://github.com/cupskeee/uro/issues/38) | pack **upload** (multipart) + `validate` | M5 | `POST /worlds` is JSON-only today |
+| BE-7 | [#39](https://github.com/cupskeee/uro/issues/39) | `backfill` / `probe` (LLM stages) | M5 | deferred; stream progress |
+| BE-8 | [#40](https://github.com/cupskeee/uro/issues/40) | `seed`, world `export` / `import` over HTTP | M5 | deferred/scaffolded |
+| BE-9 | [#41](https://github.com/cupskeee/uro/issues/41) | **campaign end**, **codex** add/list | M4/M5 | new |
+| BE-10 | [#42](https://github.com/cupskeee/uro/issues/42) | `GET /usage`, world-scoped `state?at=` / `chronicle`, ruleset registry read | M6/M4 | metering + world-scope reads |
+| BE-11 | [#43](https://github.com/cupskeee/uro/issues/43) | **WS envelope reconciliation** (add `campaign_id`/`beat_id`; the richer frame set docs/08 advertises) | M2/M4 | fixes the documented wire drift |
 
 > Sequencing rule: **Loom never blocks on the backend.** If a 🔴 endpoint isn't ready, the
 > corresponding surface ships behind a feature flag that degrades to "not supported by this
