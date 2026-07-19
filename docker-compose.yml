@@ -1,0 +1,15 @@
+# Dev convenience: a zero-dependency stub of uro-server so Loom is developable
+# without a full Uro instance. For real data, run a real `uro serve` (see the uro
+# repo) and point Loom's Connection screen at it instead.
+#
+#   docker compose up -d          # stub server on http://127.0.0.1:8787
+#   pnpm dev                      # Loom dev server on http://127.0.0.1:5173
+#
+# Then connect Loom to http://127.0.0.1:8787 with any non-empty token.
+services:
+  stub-server:
+    build: ./dev/stub-server
+    ports:
+      - '8787:8787'
+    environment:
+      PORT: '8787'

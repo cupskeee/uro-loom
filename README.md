@@ -6,8 +6,10 @@ Uro Loom is the graphical front-of-house for Uro: browse worlds and timelines, i
 event log and the epistemic layer, drive live play sessions, and perform every management
 operation the `uro` reference CLI can — from a browser instead of a terminal.
 
-> **Status: PLANNING / SCAFFOLD.** This repo currently contains design docs and an
-> implementation plan — no application code yet. See [`docs/04-plan.md`](docs/04-plan.md).
+> **Status: M0 (foundations).** The app skeleton is up — a typed `uro-server` API client
+> (with graceful 401/404/501 handling), a connection/auth screen, a health check, a dev stub
+> server, and CI (lint · typecheck · unit · E2E). No feature surfaces yet — M1 (observe) is next.
+> See [`docs/04-plan.md`](docs/04-plan.md).
 
 ---
 
@@ -71,16 +73,30 @@ around what ships today first.
 
 ## Quickstart
 
-_Not yet — there is no app to run. Once M0 lands this section will cover `pnpm install` /
-`pnpm dev` and pointing Loom at a running `uro serve`._ Until then, to stand up the engine Loom
-will target:
+Requires Node ≥ 20 and pnpm.
 
 ```sh
-# in the uro repo
-docker compose up -d --wait          # Postgres + pgvector on host port 5433
-uv run uro db migrate
-uv run uro serve --token dev=player-1 # a token-auth server for Loom to connect to
+pnpm install
+pnpm dev            # Loom dev server → http://127.0.0.1:5173
 ```
+
+Loom needs a server to talk to. Two options:
+
+```sh
+# A) zero-dep dev stub (no Uro instance needed) — enough for M0
+docker compose up -d          # stub server → http://127.0.0.1:8787
+# then in Loom's Connection screen, enter http://127.0.0.1:8787 + any token
+
+# B) a real Uro instance (in the uro repo)
+docker compose up -d --wait               # Postgres + pgvector on host port 5433
+uv run uro db migrate
+uv run uro serve --token dev=player-1     # token-auth server on :8000
+# then connect Loom to http://127.0.0.1:8000 with token "dev"
+```
+
+**Dev scripts:** `pnpm dev` · `pnpm build` · `pnpm typecheck` · `pnpm lint` · `pnpm test`
+(unit) · `pnpm test:e2e` (Playwright smoke) · `pnpm stub` (run the stub server directly).
+CI runs the whole gate on every push/PR.
 
 ## License
 

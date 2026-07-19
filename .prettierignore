@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+dist
+playwright-report
+test-results
+src/api/schema.d.ts
+**/*.md

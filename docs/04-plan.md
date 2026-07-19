@@ -133,7 +133,11 @@ Loom only consumes the wire contract.
 
 ## Risks & open decisions
 
-- **LD-2 stack** — confirm before M0 code.
+- **LD-2 stack** — ✅ accepted at M0 (React + Vite + TS; see decisions.md).
+- **CORS (M1, real server)** — the dev stub sends permissive CORS, but a real `uro serve` may not
+  send `Access-Control-Allow-Origin`, which blocks Loom's cross-origin browser calls. M1 must
+  either (a) enable CORS on `uro-server` (a small backend item), (b) serve Loom same-origin behind
+  a reverse proxy, or (c) route through the M6 BFF. Decide when M1 first hits a real instance.
 - **Coarse authority** — Loom must enforce its own per-actor authorization (M6 BFF); don't ship an
   admin token to the browser.
 - **Wire drift** (BE-11) — code to the *actual* frames, not docs/08's advertised set.

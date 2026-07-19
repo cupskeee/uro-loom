@@ -24,17 +24,21 @@ the engine's `uv` workspace, `just test`, import-linter, PyPI train); coupling l
 server **wire contract**. This is a restatement of the engine's own identity boundary, and the
 mirror of the engine-side decision to keep UI out (record it there as its own `D-*` when convenient).
 
-## LD-2 — Frontend stack (OPEN — confirm before M0 code)
+## LD-2 — Frontend stack
 
-**Status:** proposed, not yet accepted.
+**Status:** accepted (2026-07-19), at M0.
 
-**Proposed default:** TypeScript + React + Vite + TanStack Query + native WebSocket + Tailwind/
-headless components + d3 for the DAG/graph views; Vitest/Playwright for test; openapi-typescript
-for the generated client; a small Node BFF for M6 multi-tenant identity. Rationale + alternatives
-(SvelteKit, SolidStart) in [`01-architecture.md`](01-architecture.md) §4.
+**Chosen:** TypeScript + React 18 + Vite 5 + TanStack Query v5 + React Router v6 + native
+WebSocket (M2) + Tailwind v3; Vitest + Testing Library + Playwright for test; ESLint (flat) +
+Prettier; `openapi-typescript` reserved for a generated client once the server exposes a schema; a
+small Node BFF deferred to M6 (multi-tenant identity). d3 / a DAG lib will be added at M4 for the
+timeline + faction-graph views. Rationale + alternatives (SvelteKit, SolidStart) in
+[`01-architecture.md`](01-architecture.md) §4.
 
-**Why open:** genuine owner call; changes tooling and hiring but not the milestone shape (M0–M6
-are stack-agnostic). Resolve at M0.
+**Notes from the M0 build:** pnpm is the package manager (`packageManager` pinned); esbuild's
+build script is allow-listed via `pnpm.onlyBuiltDependencies`; Vite dev binds `127.0.0.1`
+explicitly so Playwright/CI reach it over IPv4. The M0 gate (lint · typecheck · unit · build ·
+E2E) is green locally and wired into CI.
 
 ## LD-3 — Client-only integration: no `uro-core` import, no direct DB, no migrations
 
