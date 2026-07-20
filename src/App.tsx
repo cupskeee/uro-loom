@@ -3,6 +3,8 @@ import { useConnection } from './config/connection'
 import { ConnectionScreen } from './components/ConnectionScreen'
 import { Layout } from './components/Layout'
 import { WorldsPage } from './pages/WorldsPage'
+import { WorldDetailPage } from './pages/WorldDetailPage'
+import { TimelinePanel } from './pages/panels/TimelinePanel'
 import { CampaignsPage } from './pages/CampaignsPage'
 import { CampaignDetailPage } from './pages/CampaignDetailPage'
 import { OverviewPanel } from './pages/panels/OverviewPanel'
@@ -25,6 +27,9 @@ export function App() {
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/worlds" replace />} />
         <Route path="worlds" element={<WorldsPage />} />
+        <Route path="worlds/:worldId" element={<WorldDetailPage />}>
+          <Route index element={<TimelinePanel />} />
+        </Route>
         <Route path="campaigns" element={<CampaignsPage />} />
         <Route path="campaigns/:campaignId" element={<CampaignDetailPage />}>
           <Route index element={<OverviewPanel />} />

@@ -103,7 +103,7 @@ export function WorldsPage() {
             {worlds.map((w) => (
               <li key={w.world_id}>
                 <Link
-                  to={`/campaigns?world=${encodeURIComponent(w.world_id)}`}
+                  to={`/worlds/${encodeURIComponent(w.world_id)}`}
                   className="block h-full"
                   data-testid="world-card"
                 >

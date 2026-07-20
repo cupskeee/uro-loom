@@ -197,3 +197,76 @@ export interface OutcomeBundle {
 }
 /** The distillation result; rendered generically (commit_id + receipt entries). */
 export type OutcomeResponse = Record<string, unknown>
+
+// ---- M4: timelines (world-scoped: /worlds/{w}/…) --------------------------------
+
+/**
+ * A branch in a world's tree (an element of GET /worlds/{w}/branches). `world_day`
+ * is the branch's in-fiction day (0 when it has no world_time events yet); a `main`
+ * branch has `forked_from: null`.
+ */
+export interface BranchInfo {
+  branch_id: string
+  world_id: string
+  name: string
+  head_commit: string | null
+  forked_from: string | null
+  head_depth: number
+  world_day: number
+}
+
+/** A named, immutable ref to a commit (a tag, not an event). */
+export interface Marker {
+  marker_id: string
+  world_id: string
+  name: string
+  commit_id: string
+}
+
+/** GET /worlds/{w}/branches → the branch tree + markers. Any-authed read. */
+export interface BranchesResponse {
+  branches: BranchInfo[]
+  markers: Marker[]
+}
+
+/** One commit on a branch's lineage, git-log style (head→genesis order). */
+export interface LogEntry {
+  commit_id: string
+  depth: number
+  event_types: string[]
+  summary: string // the beat's intent, or a terse event digest
+  markers: string[] // marker names anchored at this commit
+}
+
+/** GET /worlds/{w}/log[?branch=&limit=] → a branch's lineage. Any-authed read. */
+export interface LogResponse {
+  branch: string
+  commits: LogEntry[]
+}
+
+/**
+ * POST /worlds/{w}/branches — fork (OPERATOR-only, D-44). `from_ref` is a marker
+ * NAME or a raw commit id (markers win on collision); `time_skip_days>0` advances
+ * in-fiction time + fires downtime agenda rules on the new branch.
+ */
+export interface ForkRequest {
+  from_ref: string
+  name: string
+  time_skip_days?: number
+}
+
+/** The fork result: a fresh branch. `world_day`/`head_commit` reflect a time-skip. */
+export interface ForkResponse {
+  branch_id: string
+  world_id: string
+  name: string
+  head_commit: string | null
+  forked_from: string | null
+  world_day?: number
+}
+
+/** POST /worlds/{w}/markers — name a branch's head (OPERATOR-only, D-44). */
+export interface CreateMarkerRequest {
+  name: string
+  branch?: string
+}

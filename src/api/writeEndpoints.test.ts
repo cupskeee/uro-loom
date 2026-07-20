@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type Connection } from './client'
-import { createCampaign, createWorld, reportOutcome, timeSkip } from './endpoints'
+import {
+  createCampaign,
+  createMarker,
+  createWorld,
+  forkBranch,
+  reportOutcome,
+  timeSkip,
+} from './endpoints'
 import { ApiError, errorMessage } from './errors'
 
 const conn: Connection = { baseUrl: 'http://s.test', token: 'tok' }
@@ -62,5 +69,27 @@ describe('errorMessage', () => {
   it('falls back to the error message', () => {
     expect(errorMessage(new ApiError(500, 'boom'))).toBe('boom')
     expect(errorMessage(new Error('plain'))).toBe('plain')
+  })
+})
+
+describe('M4 timeline writes', () => {
+  it('forkBranch POSTs {from_ref, name, time_skip_days} to /worlds/{w}/branches', async () => {
+    const calls = capture()
+    await forkBranch(conn, 'wld_1', { from_ref: 'pre-strike', name: 'what-if', time_skip_days: 30 })
+    expect(calls[0].url).toBe('http://s.test/worlds/wld_1/branches')
+    expect(calls[0].init.method).toBe('POST')
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({
+      from_ref: 'pre-strike',
+      name: 'what-if',
+      time_skip_days: 30,
+    })
+  })
+
+  it('createMarker POSTs {name, branch} to /worlds/{w}/markers', async () => {
+    const calls = capture()
+    await createMarker(conn, 'wld_1', { name: 'pre-strike', branch: 'main' })
+    expect(calls[0].url).toBe('http://s.test/worlds/wld_1/markers')
+    expect(calls[0].init.method).toBe('POST')
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({ name: 'pre-strike', branch: 'main' })
   })
 })

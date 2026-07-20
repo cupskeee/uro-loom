@@ -67,6 +67,15 @@ export function isUnsupported(err: unknown): err is UnsupportedByServerError {
   return err instanceof UnsupportedByServerError
 }
 
+/**
+ * True for a 403 — used by the operator-gated surfaces (fork, marker, and the
+ * omniscient reads) to show "operator token required" rather than a hard error
+ * (D-44/D-45/D-46: these need an `--admin-token`, not a plain player token).
+ */
+export function isForbidden(err: unknown): err is ForbiddenError {
+  return err instanceof ForbiddenError
+}
+
 /** A human-readable message, preferring the server's `{detail}` (FastAPI's error shape). */
 export function errorMessage(err: unknown): string {
   if (err instanceof ApiError) {
