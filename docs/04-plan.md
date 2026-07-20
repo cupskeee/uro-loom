@@ -92,10 +92,13 @@ Goal: the signature branching + "who knows what" views. Paired with backend item
   "inspect →"). **Operator-only (D-45):** a player token gets an informational "operator required"
   panel, not the omniscient log. `QueryBoundary` now degrades a 403 gracefully; the query client no
   longer retries deterministic 4xx/501. BE-4.
-- **Epistemic Explorer** (claims + belief fan-out) · **Faction/Relationship graph** ·
-  **Counters dashboard** · **Memory/Recall inspector** (claims/beliefs/sheets/edges/counters are
-  operator-only, D-46; the state read enforces the player allowlist).
-- **Preview Beat (dry-run)** · **Consistency** panel (BE-5).
+- ✅ **Slice 3 — Epistemic Explorer (shipped):** a campaign **Epistemics** tab — claims with their
+  ground-truth value (true/false/unknown) + the **belief fan-out** (who holds each claim, at what
+  confidence, and the `learned_from` propagation chain). **Operator-only (D-46):** via
+  `state?sections=claims,beliefs`; a player token gets the operator-required panel, and the
+  scene-safe default state read is unaffected. (Faction/relationship graph · counters · memory
+  inspector remain — same operator-only sections pattern.) BE-4/D-46.
+- **Preview Beat (dry-run)** · **Consistency** panel (BE-5) — the last M4 slice.
 
 **Exit:** fork a timeline in the UI, watch the DAG branch, and inspect the epistemic delta
 between two forks.

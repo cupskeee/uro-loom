@@ -206,3 +206,40 @@ test('events (M4): a player token gets the operator-required panel, not the log 
   await expect(page.getByTestId('operator-required')).toBeVisible()
   await expect(page.getByTestId('event-row')).toHaveCount(0)
 })
+
+test('epistemics (M4): operator sees claims (truth) + the belief fan-out', async ({ page }) => {
+  await connect(page) // dev-token → operator
+  await page.goto('/campaigns/cmp_ashfall/epistemics')
+  await expect(page.getByTestId('epistemics-panel')).toBeVisible()
+
+  // A claim with its ground-truth value.
+  const meteor = page.getByTestId('claim-card').filter({ hasText: 'the meteor will fall on Vel' })
+  await expect(meteor).toBeVisible()
+  await expect(meteor).toContainText('truth: true')
+
+  // Its belief fan-out: two believers, one with a propagation chain.
+  await expect(meteor.getByTestId('believer')).toHaveCount(2)
+  await expect(meteor).toContainText('learned from')
+  await expect(meteor).toContainText('actor_kestrel')
+
+  // A false rumor nobody believes yet.
+  const traitor = page.getByTestId('claim-card').filter({ hasText: 'betrayed the Gray Watch' })
+  await expect(traitor).toContainText('truth: false')
+  await expect(traitor).toContainText('Not yet propagated')
+})
+
+test('epistemics (M4): a player token gets the operator-required panel (D-46)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByTestId('server-url').fill(STUB_URL)
+  await page.getByTestId('token').fill('player-1')
+  await page.getByTestId('connect').click()
+  await expect(page.getByTestId('health-badge')).toHaveAttribute('data-status', 'ok', {
+    timeout: 10_000,
+  })
+
+  await page.goto('/campaigns/cmp_ashfall/epistemics')
+  await expect(page.getByTestId('operator-required')).toBeVisible()
+  await expect(page.getByTestId('claim-card')).toHaveCount(0)
+})

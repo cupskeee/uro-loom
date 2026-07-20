@@ -311,3 +311,32 @@ export interface CommitDetail {
   commit_hash: string
   events: EventEnvelope[]
 }
+
+// ---- M4 slice 3: epistemic explorer (claims + beliefs, OPERATOR-only D-46) ------
+
+/** A row of proj_claims — the engine's ground truth. Operator-only (D-45/D-46). */
+export interface ClaimRow {
+  claim_id: string
+  statement: string
+  subject_refs: string[]
+  truth: string // "true" | "false" | "unknown"
+  origin: string // "narrator" | "testimony" | "history" | "module" | …
+  created_day: number
+}
+
+/** A row of proj_beliefs — who holds a claim, how strongly, and from whom. */
+export interface BeliefRow {
+  actor_id: string
+  claim_id: string
+  confidence: number
+  learned_from: string | null
+}
+
+/**
+ * GET /campaigns/{c}/state?sections=claims,beliefs — the omniscient epistemic layer.
+ * OPERATOR-only (D-46): a player token gets 403 (the scene-safe allowlist excludes these).
+ */
+export interface EpistemicState {
+  branch_id: string
+  state: { claims?: ClaimRow[]; beliefs?: BeliefRow[] }
+}
