@@ -118,7 +118,10 @@ Goal: the pack pipeline in the browser. Backend items **BE-6…BE-9**.
   commits nothing), **Probe** (model-capability report, operator, warn-not-fail). Multipart upload
   lands in the API client (a FormData path); operator stages show the admin-token hint on a 403.
   BE-6/BE-7. (Pack-upload **create** + **seed** are the deferred engine carve-outs.)
-- **Export / Import bundle** with hash-chain verification surfaced (tamper → clear error).
+- ✅ **Slice 2 — export/import (shipped):** on the Authoring page — **Export** a world to a
+  downloadable hash-chained `.uwp` (operator, D-45) and **Import** a bundle → a fresh world, with the
+  **tamper → clear error** surfaced (a malformed/altered bundle is rejected before any write). The
+  API client gained a FormData path (slice 1) reused here for the bundle round-trip. BE-8.
 - **Campaign End** (marker + PC release).
 - **Codex** add/list (participant memory).
 

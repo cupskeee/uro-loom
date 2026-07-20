@@ -7,6 +7,7 @@ import {
   createWorld,
   dryRun,
   forkBranch,
+  importWorld,
   probePack,
   reportOutcome,
   timeSkip,
@@ -131,5 +132,20 @@ describe('M5 pack authoring (multipart upload)', () => {
     const calls = capture()
     await probePack(conn, new File(['x'], 'p.zip'), 5)
     expect(calls[0].url).toBe('http://s.test/worlds/probe?tries=5')
+  })
+})
+
+describe('M5 slice 2: import', () => {
+  it('importWorld POSTs the bundle JSON to /worlds/import', async () => {
+    const calls = capture()
+    await importWorld(conn, { world_name: 'Ashfall', manifest_hash: 'h_x' })
+    expect(calls[0].url).toBe('http://s.test/worlds/import')
+    expect(calls[0].init.method).toBe('POST')
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({
+      world_name: 'Ashfall',
+      manifest_hash: 'h_x',
+    })
+    const headers = calls[0].init.headers as unknown as Record<string, string>
+    expect(headers['Content-Type']).toBe('application/json')
   })
 })

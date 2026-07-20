@@ -10,7 +10,9 @@ import {
   createMarker,
   createWorld,
   dryRun,
+  exportWorld,
   forkBranch,
+  importWorld,
   joinCampaign,
   mintToken,
   probePack,
@@ -21,6 +23,7 @@ import {
 } from './endpoints'
 import type {
   CreateCampaignRequest,
+  WorldBundle,
   CreateMarkerRequest,
   CreateWorldRequest,
   DryRunRequest,
@@ -150,5 +153,21 @@ export function useProbePack() {
   return useMutation({
     mutationFn: (args: { file: File; tries?: number }) =>
       probePack(connection!, args.file, args.tries),
+  })
+}
+
+// ---- M5 slice 2: export / import (bundle portability) ---------------------------
+
+export function useExportWorld() {
+  const { connection } = useConnection()
+  return useMutation({ mutationFn: (worldId: string) => exportWorld(connection!, worldId) })
+}
+
+export function useImportWorld() {
+  const { connection } = useConnection()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (bundle: WorldBundle) => importWorld(connection!, bundle),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['worlds'] }),
   })
 }

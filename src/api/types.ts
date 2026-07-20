@@ -413,3 +413,26 @@ export interface ProbeResponse {
   ok: boolean
   warnings: string[]
 }
+
+// ---- M5 slice 2: world export / import (bundle portability, BE-8) ---------------
+
+/**
+ * A portable, SHA-256 hash-chained world bundle (the `.uwp` content). Treated mostly
+ * opaquely by the client — downloaded on export, parsed + re-posted on import. The
+ * server recomputes the chain and rejects a tampered bundle with 400 BEFORE any write.
+ */
+export interface WorldBundle {
+  world_name: string
+  manifest_hash?: string
+  commits?: unknown[]
+  branches?: unknown[]
+  markers?: unknown[]
+  [k: string]: unknown
+}
+
+/** POST /worlds/import → the freshly-instantiated world (ids remapped). */
+export interface ImportWorldResponse {
+  world_id: string
+  name: string
+  main_branch_id: string
+}
