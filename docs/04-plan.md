@@ -113,8 +113,11 @@ event log + a commit, read the epistemic layer (claims/beliefs, operator-only), 
 
 Goal: the pack pipeline in the browser. Backend items **BE-6…BE-9**.
 
-- **Validate / Import (with pack upload) / Backfill / Probe / Seed** wizards (multipart upload +
-  LLM-stage endpoints; stream progress).
+- ✅ **Slice 1 — pack authoring (shipped):** an **Authoring** page — upload a pack `.zip` once, then
+  **Validate** (sufficiency grade + gaps, any-authed), **Backfill** (AI gap-fill preview, operator,
+  commits nothing), **Probe** (model-capability report, operator, warn-not-fail). Multipart upload
+  lands in the API client (a FormData path); operator stages show the admin-token hint on a 403.
+  BE-6/BE-7. (Pack-upload **create** + **seed** are the deferred engine carve-outs.)
 - **Export / Import bundle** with hash-chain verification surfaced (tamper → clear error).
 - **Campaign End** (marker + PC release).
 - **Codex** add/list (participant memory).

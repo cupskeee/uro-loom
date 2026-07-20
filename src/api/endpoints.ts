@@ -4,6 +4,7 @@
 
 import { apiFetch, type Connection } from './client'
 import type {
+  BackfillResponse,
   BranchesResponse,
   Campaign,
   CampaignState,
@@ -28,6 +29,8 @@ import type {
   LogResponse,
   Marker,
   MintTokenRequest,
+  ProbeResponse,
+  ValidateResponse,
   MintTokenResponse,
   OutcomeBundle,
   OutcomeResponse,
@@ -311,5 +314,38 @@ export function dryRun(
   return apiFetch<DryRunResponse>(conn, `/campaigns/${enc(campaignId)}/dry-run`, {
     method: 'POST',
     body,
+  })
+}
+
+// ---- M5 slice 1: pack authoring (multipart .zip upload) ------------------------
+
+function packForm(file: File): FormData {
+  const fd = new FormData()
+  fd.append('pack', file, file.name)
+  return fd
+}
+
+/** POST /worlds/validate — grade an uploaded pack (parse-only, any-authed, BE-6). */
+export function validatePack(conn: Connection, file: File): Promise<ValidateResponse> {
+  return apiFetch<ValidateResponse>(conn, '/worlds/validate', {
+    method: 'POST',
+    body: packForm(file),
+  })
+}
+
+/** POST /worlds/backfill — AI gap-fill preview (OPERATOR-only, commits nothing, BE-7). */
+export function backfillPack(conn: Connection, file: File): Promise<BackfillResponse> {
+  return apiFetch<BackfillResponse>(conn, '/worlds/backfill', {
+    method: 'POST',
+    body: packForm(file),
+  })
+}
+
+/** POST /worlds/probe[?tries=] — model-capability report (OPERATOR-only, BE-7). */
+export function probePack(conn: Connection, file: File, tries?: number): Promise<ProbeResponse> {
+  const q = tries != null ? `?tries=${tries}` : ''
+  return apiFetch<ProbeResponse>(conn, `/worlds/probe${q}`, {
+    method: 'POST',
+    body: packForm(file),
   })
 }

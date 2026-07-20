@@ -261,3 +261,51 @@ test('preview (M4): consistency metric + a dry-run that commits nothing', async 
   await expect(events.getByText('BeatResolved')).toBeVisible()
   await expect(events.getByText('ClaimRecorded')).toBeVisible()
 })
+
+const PACK = { name: 'pack.zip', mimeType: 'application/zip', buffer: Buffer.from('dummy-pack') }
+
+test('authoring (M5): operator uploads a pack → validate, backfill, probe', async ({ page }) => {
+  await connect(page) // dev-token → operator
+  await page.getByRole('link', { name: 'Authoring' }).click()
+  await expect(page.getByTestId('authoring-page')).toBeVisible()
+
+  await page.getByTestId('pack-file').setInputFiles(PACK)
+
+  // Validate (any-authed) → the sufficiency grade + a conflict gap.
+  await page.getByTestId('validate-run').click()
+  await expect(page.getByTestId('validate-result')).toContainText('thin')
+  await expect(page.getByTestId('validate-result')).toContainText('GAP')
+
+  // Backfill (operator) → before→after grade + an ai_backfill seed.
+  await page.getByTestId('backfill-run').click()
+  await expect(page.getByTestId('backfill-result')).toContainText('runnable')
+  await expect(page.getByTestId('backfill-result')).toContainText('ai_backfill')
+
+  // Probe (operator) → the capability report (warn-not-fail).
+  await page.getByTestId('probe-run').click()
+  await expect(page.getByTestId('probe-result')).toContainText('structured_output')
+  await expect(page.getByTestId('probe-result')).toContainText('warn')
+})
+
+test('authoring (M5): a player can validate but backfill needs an operator token', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByTestId('server-url').fill(STUB_URL)
+  await page.getByTestId('token').fill('player-1')
+  await page.getByTestId('connect').click()
+  await expect(page.getByTestId('health-badge')).toHaveAttribute('data-status', 'ok', {
+    timeout: 10_000,
+  })
+
+  await page.goto('/authoring')
+  await page.getByTestId('pack-file').setInputFiles(PACK)
+
+  // Validate works for a player (parse-only, any-authed).
+  await page.getByTestId('validate-run').click()
+  await expect(page.getByTestId('validate-result')).toContainText('thin')
+
+  // Backfill is operator-only → the feedback shows the admin-token hint (not the result).
+  await page.getByTestId('backfill-run').click()
+  await expect(page.getByTestId('backfill-feedback')).toContainText('Operator token required')
+})

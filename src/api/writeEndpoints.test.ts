@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type Connection } from './client'
 import {
+  backfillPack,
   createCampaign,
   createMarker,
   createWorld,
   dryRun,
   forkBranch,
+  probePack,
   reportOutcome,
   timeSkip,
+  validatePack,
 } from './endpoints'
 import { ApiError, errorMessage } from './errors'
 
@@ -102,5 +105,31 @@ describe('M4 slice 4: dry-run', () => {
     expect(calls[0].url).toBe('http://s.test/campaigns/cmp_1/dry-run')
     expect(calls[0].init.method).toBe('POST')
     expect(JSON.parse(String(calls[0].init.body))).toEqual({ intent: 'I kick the door' })
+  })
+})
+
+describe('M5 pack authoring (multipart upload)', () => {
+  it('validatePack POSTs FormData to /worlds/validate (no JSON Content-Type)', async () => {
+    const calls = capture()
+    const file = new File(['x'], 'pack.zip', { type: 'application/zip' })
+    await validatePack(conn, file)
+    expect(calls[0].url).toBe('http://s.test/worlds/validate')
+    expect(calls[0].init.method).toBe('POST')
+    expect(calls[0].init.body).toBeInstanceOf(FormData)
+    const headers = calls[0].init.headers as unknown as Record<string, string>
+    expect(headers['Content-Type']).toBeUndefined() // the browser sets the multipart boundary
+    expect(headers['Authorization']).toBe('Bearer tok')
+  })
+
+  it('backfillPack targets /worlds/backfill', async () => {
+    const calls = capture()
+    await backfillPack(conn, new File(['x'], 'p.zip'))
+    expect(calls[0].url).toBe('http://s.test/worlds/backfill')
+  })
+
+  it('probePack passes ?tries=', async () => {
+    const calls = capture()
+    await probePack(conn, new File(['x'], 'p.zip'), 5)
+    expect(calls[0].url).toBe('http://s.test/worlds/probe?tries=5')
   })
 })
