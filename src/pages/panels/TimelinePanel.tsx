@@ -261,12 +261,12 @@ export function TimelinePanel() {
         </h2>
         <QueryBoundary
           query={logQ}
-          isEmpty={(d) => d.commits.length === 0}
+          isEmpty={(d) => d.entries.length === 0}
           empty="No commits on this branch."
         >
           {(d) => (
             <ol className="divide-y divide-neutral-900">
-              {d.commits.map((c) => (
+              {d.entries.map((c) => (
                 <LogRow key={c.commit_id} entry={c} />
               ))}
             </ol>

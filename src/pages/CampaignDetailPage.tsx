@@ -27,7 +27,7 @@ export function CampaignDetailPage() {
                   ? `${c.ruleset_id}${c.ruleset_version ? ` @${c.ruleset_version}` : ''}`
                   : 'default ruleset'}
               </Badge>
-              <span className="text-xs text-neutral-500">seed {c.seed}</span>
+              <span className="text-xs text-neutral-500">seed {c.seed ?? '—'}</span>
             </div>
             <div className="mt-2 text-xs text-neutral-600">
               world <IdChip>{c.world_id}</IdChip> · branch <IdChip>{c.branch_id}</IdChip>

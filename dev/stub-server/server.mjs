@@ -475,6 +475,15 @@ function isOperator(token) {
   return !/^(player|pleb)/i.test(String(token || ''))
 }
 
+// Mirror the real server's `_campaign_view`: `seed` is GM data, stripped for a player token. Keeping
+// the stub faithful is what lets the e2e catch a client that assumes `seed` is always present.
+function campaignView(campaign, token) {
+  if (isOperator(token)) return campaign
+  const view = { ...campaign }
+  delete view.seed
+  return view
+}
+
 function commitDepth(worldId, commitId) {
   for (const b of BRANCHES[worldId] ?? []) {
     const hit = (LOG[b.branch_id] ?? []).find((c) => c.commit_id === commitId)
@@ -872,7 +881,9 @@ const server = createServer((req, res) => {
     })
   }
 
-  // M4: GET /worlds/{w}/log[?branch=&limit=] → { branch, commits } (head→genesis).
+  // M4: GET /worlds/{w}/log[?branch=&limit=] → { branch, head_depth, entries } (head→genesis).
+  // NOTE: the field is `entries`, matching the REAL uro-server — a prior `commits` drift here let
+  // the client read `d.commits` (undefined) and crash the timeline; the stub must mirror reality.
   const ml = p.match(/^\/worlds\/([^/]+)\/log$/)
   if (req.method === 'GET' && ml) {
     const wid = decodeURIComponent(ml[1])
@@ -885,9 +896,9 @@ const server = createServer((req, res) => {
       return send(res, 400, { detail: 'limit must be an integer' })
     if (lim != null && Number(lim) < 0)
       return send(res, 400, { detail: 'limit must not be negative' })
-    let commits = LOG[b.branch_id] ?? []
-    if (lim != null) commits = commits.slice(0, Number(lim))
-    return send(res, 200, { branch: branchName, commits })
+    let entries = LOG[b.branch_id] ?? []
+    if (lim != null) entries = entries.slice(0, Number(lim))
+    return send(res, 200, { branch: branchName, head_depth: b.head_depth ?? 0, entries })
   }
 
   // M4 slice 2: GET /worlds/{w}/events (raw log, filterable) — OPERATOR-only (D-45).
@@ -936,7 +947,11 @@ const server = createServer((req, res) => {
   if (req.method === 'GET' && p === '/campaigns') {
     const wid = url.searchParams.get('world_id')
     const list = wid ? CAMPAIGNS.filter((c) => c.world_id === wid) : CAMPAIGNS
-    return send(res, 200, list)
+    return send(
+      res,
+      200,
+      list.map((c) => campaignView(c, token)),
+    )
   }
 
   const m = p.match(/^\/campaigns\/([^/]+)(?:\/(roster|state|chronicle))?$/)
@@ -945,8 +960,12 @@ const server = createServer((req, res) => {
     const sub = m[2]
     const campaign = CAMPAIGNS.find((c) => c.campaign_id === id)
 
-    // roster does NO existence check → 200 {pcs:[]} even for a missing campaign.
-    if (sub === 'roster') return send(res, 200, ROSTER[id] ?? { pcs: [] })
+    // roster 404s on a missing campaign, like every sibling read (must mirror the real server, or
+    // the e2e never exercises the error path — the drift that hid the /log crash).
+    if (sub === 'roster') {
+      if (!campaign) return send(res, 404, { detail: 'no such campaign' })
+      return send(res, 200, ROSTER[id] ?? { pcs: [] })
+    }
 
     // state/chronicle 404 on a missing campaign (like the real handlers).
     if (sub === 'state') {
@@ -968,7 +987,7 @@ const server = createServer((req, res) => {
     }
     // bare /campaigns/{id}
     if (!campaign) return send(res, 404, { detail: 'no such campaign' })
-    return send(res, 200, campaign)
+    return send(res, 200, campaignView(campaign, token))
   }
 
   // M5 slice 3: GET /campaigns/{c}/codex[?participant=] — participant notes (self-or-admin, D-39).

@@ -31,7 +31,7 @@ export function OverviewPanel() {
                 c.ruleset_id ? `${c.ruleset_id} @${c.ruleset_version || '—'}` : 'registry default'
               }
             />
-            <Row label="seed" value={String(c.seed)} />
+            <Row label="seed" value={c.seed != null ? String(c.seed) : '— (operator only)'} />
           </Card>
           <Card className="p-4 text-sm">
             <div className="mb-2 font-medium text-neutral-200">Explore</div>

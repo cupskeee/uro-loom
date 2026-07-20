@@ -156,7 +156,7 @@ export function listBranches(
   return apiFetch<BranchesResponse>(conn, `/worlds/${enc(worldId)}/branches`, { signal })
 }
 
-/** GET /worlds/{world_id}/log[?branch=&limit=] → { branch, commits }. Any-authed. */
+/** GET /worlds/{world_id}/log[?branch=&limit=] → { branch, head_depth, entries }. Any-authed. */
 export function getLog(
   conn: Connection,
   worldId: string,
