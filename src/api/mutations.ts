@@ -6,7 +6,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useConnection } from '../config/connection'
 import {
   createCampaign,
+  createMarker,
   createWorld,
+  forkBranch,
   joinCampaign,
   mintToken,
   reportOutcome,
@@ -15,7 +17,9 @@ import {
 } from './endpoints'
 import type {
   CreateCampaignRequest,
+  CreateMarkerRequest,
   CreateWorldRequest,
+  ForkRequest,
   JoinCampaignRequest,
   MintTokenRequest,
   OutcomeBundle,
@@ -86,6 +90,30 @@ export function useReportOutcome(campaignId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['chronicle', connection?.baseUrl, campaignId] })
       qc.invalidateQueries({ queryKey: ['state', connection?.baseUrl, campaignId] })
+    },
+  })
+}
+
+// ---- M4: timeline writes (operator-only, D-44) ----------------------------------
+
+export function useForkBranch(worldId: string) {
+  const { connection } = useConnection()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: ForkRequest) => forkBranch(connection!, worldId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['branches', connection?.baseUrl, worldId] }),
+  })
+}
+
+export function useCreateMarker(worldId: string) {
+  const { connection } = useConnection()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CreateMarkerRequest) => createMarker(connection!, worldId, body),
+    onSuccess: () => {
+      // a marker anchors on a branch head → both the tree and that branch's log show it
+      qc.invalidateQueries({ queryKey: ['branches', connection?.baseUrl, worldId] })
+      qc.invalidateQueries({ queryKey: ['log', connection?.baseUrl, worldId] })
     },
   })
 }

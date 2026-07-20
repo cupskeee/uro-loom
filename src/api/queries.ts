@@ -8,7 +8,9 @@ import {
   getCampaign,
   getCampaignState,
   getChronicle,
+  getLog,
   getRoster,
+  listBranches,
   listCampaigns,
   listWorlds,
 } from './endpoints'
@@ -64,5 +66,25 @@ export function useChronicle(campaignId: string, limit?: number) {
     queryKey: ['chronicle', connection?.baseUrl, campaignId, limit ?? null],
     enabled: !!connection,
     queryFn: ({ signal }) => getChronicle(connection!, campaignId, limit, signal),
+  })
+}
+
+// ---- M4: timelines --------------------------------------------------------------
+
+export function useBranches(worldId: string) {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['branches', connection?.baseUrl, worldId],
+    enabled: !!connection && !!worldId,
+    queryFn: ({ signal }) => listBranches(connection!, worldId, signal),
+  })
+}
+
+export function useLog(worldId: string, branch?: string, limit?: number) {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['log', connection?.baseUrl, worldId, branch ?? 'main', limit ?? null],
+    enabled: !!connection && !!worldId,
+    queryFn: ({ signal }) => getLog(connection!, worldId, branch, limit, signal),
   })
 }

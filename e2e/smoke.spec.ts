@@ -45,7 +45,9 @@ test('observe: browse worlds → campaign → roster / state / chronicle', async
   await expect(page.getByTestId('worlds-page')).toBeVisible()
   await page.getByRole('link', { name: /Ashfall/ }).click()
 
-  // Filtered campaigns for that world.
+  // A world card now opens the world workspace (Timeline); campaigns are one link away.
+  await expect(page.getByTestId('world-detail')).toBeVisible()
+  await page.getByRole('link', { name: /campaigns/ }).click()
   await expect(page.getByTestId('campaigns-page')).toBeVisible()
   await page.getByTestId('campaign-row').filter({ hasText: 'cmp_ashfall' }).click()
 
@@ -111,4 +113,41 @@ test('play: an intent streams a beat; table-talk stays on the non-canon lane', a
   const talk = page.getByTestId('talk-entry')
   await expect(talk).toBeVisible()
   await expect(talk).toContainText('meta: brb')
+})
+
+test('timeline (M4): branches + commit log render; fork + marker (operator) succeed', async ({
+  page,
+}) => {
+  await connect(page)
+
+  // World card → the world workspace, Timeline tab by default.
+  await page.getByRole('link', { name: /Ashfall/ }).click()
+  await expect(page.getByTestId('world-detail')).toBeVisible()
+  await expect(page.getByTestId('timeline-panel')).toBeVisible()
+
+  // The branch tree + markers render.
+  await expect(page.getByTestId('branch-row').filter({ hasText: 'main' })).toBeVisible()
+  await expect(page.getByText('what-if-vel-stands')).toBeVisible()
+  await expect(page.getByTestId('markers')).toContainText('pre-strike')
+
+  // The commit log for the selected (main) branch, head→genesis.
+  await expect(
+    page.getByTestId('log-row').filter({ hasText: 'the meteor strikes Vel' }),
+  ).toBeVisible()
+
+  // Fork from a marker (dev-token is an operator → success).
+  await page.getByTestId('toggle-fork').click()
+  await page.getByTestId('fork-from').fill('pre-strike')
+  await page.getByTestId('fork-name').fill('what-if-e2e')
+  await page.getByTestId('fork-submit').click()
+  await expect(page.getByTestId('fork-feedback')).toContainText('forked')
+
+  // The new branch appears in the tree (queries invalidated).
+  await expect(page.getByTestId('branch-row').filter({ hasText: 'what-if-e2e' })).toBeVisible()
+
+  // Add a marker on main's head.
+  await page.getByTestId('toggle-marker').click()
+  await page.getByTestId('marker-name').fill('e2e-mark')
+  await page.getByTestId('marker-submit').click()
+  await expect(page.getByTestId('marker-feedback')).toContainText('marked at')
 })

@@ -152,6 +152,151 @@ const emptyState = (branchId) => ({
   state: { actors: [], threads: [], places: [], factions: [] },
 })
 
+// ---- M4 timelines: branches, markers, per-branch commit logs -------------------
+
+const BRANCHES = {
+  wld_ashfall: [
+    {
+      branch_id: 'br_ashfall_main',
+      world_id: 'wld_ashfall',
+      name: 'main',
+      head_commit: 'cmt_a5',
+      forked_from: null,
+      head_depth: 5,
+      world_day: 12,
+    },
+    {
+      branch_id: 'br_ashfall_whatif',
+      world_id: 'wld_ashfall',
+      name: 'what-if-vel-stands',
+      head_commit: 'cmt_a3',
+      forked_from: 'cmt_a3',
+      head_depth: 3,
+      world_day: 8,
+    },
+  ],
+  wld_thornwood: [
+    {
+      branch_id: 'br_thornwood_main',
+      world_id: 'wld_thornwood',
+      name: 'main',
+      head_commit: 'cmt_t1',
+      forked_from: null,
+      head_depth: 1,
+      world_day: 0,
+    },
+  ],
+}
+
+const MARKERS = {
+  wld_ashfall: [
+    { marker_id: 'mk_prestrike', world_id: 'wld_ashfall', name: 'pre-strike', commit_id: 'cmt_a3' },
+  ],
+  wld_thornwood: [],
+}
+
+// keyed by branch_id; head→genesis order (matches the real `uro log` view)
+const LOG = {
+  br_ashfall_main: [
+    {
+      commit_id: 'cmt_a5',
+      depth: 5,
+      event_types: ['BeatResolved', 'PlaceDestroyed'],
+      summary: 'the meteor strikes Vel',
+      markers: [],
+    },
+    {
+      commit_id: 'cmt_a4',
+      depth: 4,
+      event_types: ['BeatResolved'],
+      summary: 'the wizard climbs the spire',
+      markers: [],
+    },
+    {
+      commit_id: 'cmt_a3',
+      depth: 3,
+      event_types: ['BeatResolved', 'ClaimRecorded'],
+      summary: 'a warning is spoken',
+      markers: ['pre-strike'],
+    },
+    {
+      commit_id: 'cmt_a2',
+      depth: 2,
+      event_types: ['BeatResolved'],
+      summary: 'the road to Vel',
+      markers: [],
+    },
+    {
+      commit_id: 'cmt_a1',
+      depth: 1,
+      event_types: ['CampaignStarted', 'PCBound'],
+      summary: 'campaign begins',
+      markers: [],
+    },
+    {
+      commit_id: 'cmt_a0',
+      depth: 0,
+      event_types: ['WorldGenesis'],
+      summary: 'world genesis',
+      markers: [],
+    },
+  ],
+  br_ashfall_whatif: [
+    {
+      commit_id: 'cmt_a3',
+      depth: 3,
+      event_types: ['BeatResolved', 'ClaimRecorded'],
+      summary: 'a warning is spoken',
+      markers: ['pre-strike'],
+    },
+    {
+      commit_id: 'cmt_a2',
+      depth: 2,
+      event_types: ['BeatResolved'],
+      summary: 'the road to Vel',
+      markers: [],
+    },
+    {
+      commit_id: 'cmt_a1',
+      depth: 1,
+      event_types: ['CampaignStarted', 'PCBound'],
+      summary: 'campaign begins',
+      markers: [],
+    },
+    {
+      commit_id: 'cmt_a0',
+      depth: 0,
+      event_types: ['WorldGenesis'],
+      summary: 'world genesis',
+      markers: [],
+    },
+  ],
+  br_thornwood_main: [
+    {
+      commit_id: 'cmt_t1',
+      depth: 1,
+      event_types: ['WorldGenesis'],
+      summary: 'world genesis',
+      markers: [],
+    },
+  ],
+}
+
+// Dev convention: a "player*"/"pleb*" token is a plain player (→ 403 on operator
+// writes, so the 403 UX is demoable); any other token is treated as an operator so
+// the happy path works out of the box. The real server gates on `is_admin` (D-44).
+function isOperator(token) {
+  return !/^(player|pleb)/i.test(String(token || ''))
+}
+
+function commitDepth(worldId, commitId) {
+  for (const b of BRANCHES[worldId] ?? []) {
+    const hit = (LOG[b.branch_id] ?? []).find((c) => c.commit_id === commitId)
+    if (hit) return hit.depth
+  }
+  return null
+}
+
 // ---- HTTP -----------------------------------------------------------------------
 
 function send(res, status, obj) {
@@ -181,8 +326,73 @@ function slug(s) {
   return out || 'x'
 }
 
-// Write endpoints (M3). Mutations are in-memory and live for the process lifetime.
-function handlePost(p, body, res) {
+// Write endpoints (M3 + M4). Mutations are in-memory and live for the process lifetime.
+function handlePost(p, body, res, token) {
+  // M4: fork a branch (operator-only, D-44).
+  const mf = p.match(/^\/worlds\/([^/]+)\/branches$/)
+  if (mf) {
+    const wid = decodeURIComponent(mf[1])
+    if (!WORLDS.find((w) => w.world_id === wid)) return send(res, 404, { detail: 'no such world' })
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    if (!body.from_ref) return send(res, 400, { detail: "missing required field 'from_ref'" })
+    if (!body.name) return send(res, 400, { detail: "missing required field 'name'" })
+    const branches = BRANCHES[wid] ?? (BRANCHES[wid] = [])
+    if (branches.find((b) => b.name === body.name))
+      return send(res, 400, { detail: `branch ${body.name} already exists in this world` })
+    const marker = (MARKERS[wid] ?? []).find((mk) => mk.name === body.from_ref)
+    const forkCommit = marker ? marker.commit_id : body.from_ref // markers win on collision
+    const depth = commitDepth(wid, forkCommit)
+    if (depth == null) return send(res, 400, { detail: `unknown ref: ${body.from_ref}` })
+    const days = Number(body.time_skip_days || 0)
+    const nb = {
+      branch_id: nextId('br'),
+      world_id: wid,
+      name: String(body.name),
+      head_commit: forkCommit,
+      forked_from: forkCommit,
+      head_depth: depth + (days > 0 ? 1 : 0),
+      world_day: days > 0 ? days : depth * 2,
+    }
+    branches.push(nb)
+    // the fork shares history up to the fork point (copy-on-fork)
+    const srcLog = LOG[branches[0].branch_id] ?? []
+    LOG[nb.branch_id] = srcLog.filter((c) => c.depth <= depth)
+    const result = {
+      branch_id: nb.branch_id,
+      world_id: wid,
+      name: nb.name,
+      head_commit: nb.head_commit,
+      forked_from: nb.forked_from,
+    }
+    if (days > 0) result.world_day = days
+    return send(res, 200, result)
+  }
+
+  // M4: name a branch head with a marker (operator-only, D-44).
+  const mm = p.match(/^\/worlds\/([^/]+)\/markers$/)
+  if (mm) {
+    const wid = decodeURIComponent(mm[1])
+    if (!WORLDS.find((w) => w.world_id === wid)) return send(res, 404, { detail: 'no such world' })
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    if (!body.name) return send(res, 400, { detail: "missing required field 'name'" })
+    const branchName = String(body.branch || 'main')
+    const b = (BRANCHES[wid] ?? []).find((x) => x.name === branchName)
+    if (!b) return send(res, 404, { detail: `no such branch: ${branchName}` })
+    const markers = MARKERS[wid] ?? (MARKERS[wid] = [])
+    if (markers.find((mk) => mk.name === body.name))
+      return send(res, 400, { detail: `marker ${body.name} already exists in this world` })
+    const marker = {
+      marker_id: nextId('mk'),
+      world_id: wid,
+      name: String(body.name),
+      commit_id: b.head_commit,
+    }
+    markers.push(marker)
+    const log = LOG[b.branch_id]
+    if (log && log[0]) log[0].markers = [...new Set([...log[0].markers, marker.name])]
+    return send(res, 200, marker)
+  }
+
   if (p === '/worlds') {
     if (!body.name) return send(res, 400, { detail: "missing required field 'name'" })
     const world = {
@@ -284,12 +494,38 @@ const server = createServer((req, res) => {
       } catch {
         return send(res, 400, { detail: 'invalid json' })
       }
-      handlePost(p, body, res)
+      handlePost(p, body, res, token)
     })
     return
   }
 
   if (req.method === 'GET' && p === '/worlds') return send(res, 200, WORLDS)
+
+  // M4: GET /worlds/{w}/branches → { branches, markers }.
+  const mb = p.match(/^\/worlds\/([^/]+)\/branches$/)
+  if (req.method === 'GET' && mb) {
+    const wid = decodeURIComponent(mb[1])
+    if (!WORLDS.find((w) => w.world_id === wid)) return send(res, 404, { detail: 'no such world' })
+    return send(res, 200, { branches: BRANCHES[wid] ?? [], markers: MARKERS[wid] ?? [] })
+  }
+
+  // M4: GET /worlds/{w}/log[?branch=&limit=] → { branch, commits } (head→genesis).
+  const ml = p.match(/^\/worlds\/([^/]+)\/log$/)
+  if (req.method === 'GET' && ml) {
+    const wid = decodeURIComponent(ml[1])
+    if (!WORLDS.find((w) => w.world_id === wid)) return send(res, 404, { detail: 'no such world' })
+    const branchName = url.searchParams.get('branch') || 'main'
+    const b = (BRANCHES[wid] ?? []).find((x) => x.name === branchName)
+    if (!b) return send(res, 404, { detail: `no such branch: ${branchName}` })
+    const lim = url.searchParams.get('limit')
+    if (lim != null && !/^-?\d+$/.test(lim))
+      return send(res, 400, { detail: 'limit must be an integer' })
+    if (lim != null && Number(lim) < 0)
+      return send(res, 400, { detail: 'limit must not be negative' })
+    let commits = LOG[b.branch_id] ?? []
+    if (lim != null) commits = commits.slice(0, Number(lim))
+    return send(res, 200, { branch: branchName, commits })
+  }
 
   if (req.method === 'GET' && p === '/campaigns') {
     const wid = url.searchParams.get('world_id')

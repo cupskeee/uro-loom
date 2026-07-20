@@ -4,16 +4,22 @@
 
 import { apiFetch, type Connection } from './client'
 import type {
+  BranchesResponse,
   Campaign,
   CampaignState,
   ChronicleResponse,
   CreateCampaignRequest,
   CreateCampaignResponse,
+  CreateMarkerRequest,
   CreateWorldRequest,
   CreateWorldResponse,
+  ForkRequest,
+  ForkResponse,
   Health,
   JoinCampaignRequest,
   JoinCampaignResponse,
+  LogResponse,
+  Marker,
   MintTokenRequest,
   MintTokenResponse,
   OutcomeBundle,
@@ -94,7 +100,33 @@ export function getChronicle(
   })
 }
 
-// ---- Writes (M3 operate) -------------------------------------------------------
+// ---- M4: timelines (world-scoped reads) ----------------------------------------
+
+/** GET /worlds/{world_id}/branches → { branches, markers }. Any-authed (404 if absent). */
+export function listBranches(
+  conn: Connection,
+  worldId: string,
+  signal?: AbortSignal,
+): Promise<BranchesResponse> {
+  return apiFetch<BranchesResponse>(conn, `/worlds/${enc(worldId)}/branches`, { signal })
+}
+
+/** GET /worlds/{world_id}/log[?branch=&limit=] → { branch, commits }. Any-authed. */
+export function getLog(
+  conn: Connection,
+  worldId: string,
+  branch?: string,
+  limit?: number,
+  signal?: AbortSignal,
+): Promise<LogResponse> {
+  const params = new URLSearchParams()
+  if (branch) params.set('branch', branch)
+  if (limit != null) params.set('limit', String(limit))
+  const q = params.toString()
+  return apiFetch<LogResponse>(conn, `/worlds/${enc(worldId)}/log${q ? `?${q}` : ''}`, { signal })
+}
+
+// ---- Writes (M3 operate + M4 timeline writes) ----------------------------------
 
 /** POST /worlds — create a world. */
 export function createWorld(
@@ -176,4 +208,25 @@ export function reportOutcome(
     `/campaigns/${enc(campaignId)}/encounters/${enc(encounterId)}/outcome`,
     { method: 'POST', body: bundle },
   )
+}
+
+/** POST /worlds/{world_id}/branches — fork a branch (OPERATOR-only, D-44). */
+export function forkBranch(
+  conn: Connection,
+  worldId: string,
+  body: ForkRequest,
+): Promise<ForkResponse> {
+  return apiFetch<ForkResponse>(conn, `/worlds/${enc(worldId)}/branches`, {
+    method: 'POST',
+    body,
+  })
+}
+
+/** POST /worlds/{world_id}/markers — name a branch head (OPERATOR-only, D-44). */
+export function createMarker(
+  conn: Connection,
+  worldId: string,
+  body: CreateMarkerRequest,
+): Promise<Marker> {
+  return apiFetch<Marker>(conn, `/worlds/${enc(worldId)}/markers`, { method: 'POST', body })
 }

@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type Connection } from './client'
-import { getCampaign, getChronicle, getRoster, listCampaigns, listWorlds } from './endpoints'
+import {
+  getCampaign,
+  getChronicle,
+  getLog,
+  getRoster,
+  listBranches,
+  listCampaigns,
+  listWorlds,
+} from './endpoints'
 
 const conn: Connection = { baseUrl: 'http://server.test', token: 'tok' }
 
@@ -59,5 +67,31 @@ describe('endpoint URL construction', () => {
     const urls = captureFetch()
     await getChronicle(conn, 'cmp_1')
     expect(urls[0]).toBe('http://server.test/campaigns/cmp_1/chronicle')
+  })
+})
+
+describe('M4 timeline reads', () => {
+  it('listBranches → GET /worlds/{w}/branches (id encoded)', async () => {
+    const urls = captureFetch()
+    await listBranches(conn, 'wld/1')
+    expect(urls[0]).toBe('http://server.test/worlds/wld%2F1/branches')
+  })
+
+  it('getLog defaults to no query', async () => {
+    const urls = captureFetch()
+    await getLog(conn, 'wld_1')
+    expect(urls[0]).toBe('http://server.test/worlds/wld_1/log')
+  })
+
+  it('getLog passes ?branch= and ?limit=', async () => {
+    const urls = captureFetch()
+    await getLog(conn, 'wld_1', 'what-if', 10)
+    expect(urls[0]).toBe('http://server.test/worlds/wld_1/log?branch=what-if&limit=10')
+  })
+
+  it('getLog passes limit=0 (a valid empty page, not dropped)', async () => {
+    const urls = captureFetch()
+    await getLog(conn, 'wld_1', undefined, 0)
+    expect(urls[0]).toBe('http://server.test/worlds/wld_1/log?limit=0')
   })
 })

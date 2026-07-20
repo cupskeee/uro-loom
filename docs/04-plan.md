@@ -83,12 +83,15 @@ the same pattern._
 
 Goal: the signature branching + "who knows what" views. Paired with backend items **BE-1…BE-5**.
 
-- **Timeline / Branch Graph** (commit DAG) · **Branch list** · **Fork** (from commit/marker,
-  time-skip) · **Add Marker** · **Commit Log**.
-- **Event-Log Inspector** + **Commit/Beat Detail**.
+- ✅ **Slice 1 — timeline cluster (shipped):** a **World workspace** (`/worlds/:worldId`) with a
+  **Timeline** tab — **Branch list** (heads, depth, in-fiction day, fork origin) · **Commit Log**
+  (git-log lineage, markers) · **Fork** (from a commit/marker, optional time-skip) · **Add Marker**.
+  Fork + marker are **operator-only** (a 403 renders "operator token required", D-44). BE-1/2/3.
+- **Event-Log Inspector** + **Commit/Beat Detail** (BE-4, **operator-only** — the omniscient log).
 - **Epistemic Explorer** (claims + belief fan-out) · **Faction/Relationship graph** ·
-  **Counters dashboard** · **Memory/Recall inspector**.
-- **Preview Beat (dry-run)** · **Consistency** panel.
+  **Counters dashboard** · **Memory/Recall inspector** (claims/beliefs/sheets/edges/counters are
+  operator-only, D-46; the state read enforces the player allowlist).
+- **Preview Beat (dry-run)** · **Consistency** panel (BE-5).
 
 **Exit:** fork a timeline in the UI, watch the DAG branch, and inspect the epistemic delta
 between two forks.
