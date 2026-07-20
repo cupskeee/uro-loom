@@ -3,6 +3,7 @@ import { type Connection } from './client'
 import {
   getCampaign,
   getChronicle,
+  getCodex,
   getCommit,
   getConsistency,
   getEpistemicState,
@@ -151,5 +152,18 @@ describe('M5 slice 2: export', () => {
     const urls = captureFetch()
     await exportWorld(conn, 'wld_1')
     expect(urls[0]).toBe('http://server.test/worlds/wld_1/export')
+  })
+})
+
+describe('M5 slice 3: codex read', () => {
+  it('getCodex → GET /campaigns/{c}/codex (no participant)', async () => {
+    const urls = captureFetch()
+    await getCodex(conn, 'cmp_1')
+    expect(urls[0]).toBe('http://server.test/campaigns/cmp_1/codex')
+  })
+  it('getCodex passes ?participant=', async () => {
+    const urls = captureFetch()
+    await getCodex(conn, 'cmp_1', 'player 2')
+    expect(urls[0]).toBe('http://server.test/campaigns/cmp_1/codex?participant=player%202')
   })
 })

@@ -9,7 +9,9 @@ import {
   createCampaign,
   createMarker,
   createWorld,
+  addCodexNote,
   dryRun,
+  endCampaign,
   exportWorld,
   forkBranch,
   importWorld,
@@ -22,7 +24,9 @@ import {
   timeSkip,
 } from './endpoints'
 import type {
+  CodexAddRequest,
   CreateCampaignRequest,
+  EndCampaignRequest,
   WorldBundle,
   CreateMarkerRequest,
   CreateWorldRequest,
@@ -169,5 +173,26 @@ export function useImportWorld() {
   return useMutation({
     mutationFn: (bundle: WorldBundle) => importWorld(connection!, bundle),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['worlds'] }),
+  })
+}
+
+// ---- M5 slice 3: campaign end + codex add (BE-9) --------------------------------
+
+export function useEndCampaign(campaignId: string) {
+  const { connection } = useConnection()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: EndCampaignRequest) => endCampaign(connection!, campaignId, body),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['campaign', connection?.baseUrl, campaignId] }),
+  })
+}
+
+export function useAddCodexNote(campaignId: string) {
+  const { connection } = useConnection()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: CodexAddRequest) => addCodexNote(connection!, campaignId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['codex', connection?.baseUrl, campaignId] }),
   })
 }

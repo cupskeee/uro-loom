@@ -436,3 +436,40 @@ export interface ImportWorldResponse {
   name: string
   main_branch_id: string
 }
+
+// ---- M5 slice 3: campaign end + codex (participant memory, BE-9) ----------------
+
+/** POST /campaigns/{c}/end — end a campaign, marking the closing commit (operator, D-44). */
+export interface EndCampaignRequest {
+  marker: string
+  outcome?: string
+}
+
+/** A participant's out-of-world note (survives a fork; never canon). */
+export interface ParticipantNote {
+  key: string
+  text: string
+  pinned: boolean
+  entity_refs: string[]
+}
+
+/** GET /campaigns/{c}/codex[?participant=] → a participant's notes (self-or-admin, D-39). */
+export interface CodexResponse {
+  participant: string
+  notes: ParticipantNote[]
+}
+
+/** POST /campaigns/{c}/codex — add a note (self-or-admin). */
+export interface CodexAddRequest {
+  text: string
+  participant?: string
+  key?: string
+  pinned?: boolean
+  refs?: string[]
+}
+
+/** The add-note result (the resolved participant + the dedup key). */
+export interface CodexAddResponse {
+  participant: string
+  key: string
+}
