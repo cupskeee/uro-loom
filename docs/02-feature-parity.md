@@ -38,30 +38,30 @@ Legend — **Backend**: 🟢 endpoint exists · 🟡 partial (exists but limited
 
 | CLI command | Loom surface | Backend |
 |-------------|--------------|---------|
-| `uro world new NAME` | **New World** form (blank world + default campaign + starter PC) | 🟡 `POST /worlds` (+ compose `POST /worlds/{w}/campaigns`; CLI's default-PC convenience replicated client-side) |
-| `uro world validate PATH` | **Validate Pack** — upload/paste a pack, show sufficiency grade + gaps | 🔴 new `POST /worlds/validate` + multipart upload |
-| `uro world create PATH [--backfill]` | **Import World from Pack** wizard (optional AI backfill) | 🟡 `POST /worlds` is JSON-only; 🔴 pack upload + `--backfill` (LLM) endpoints |
-| `uro world seed PATH [--seed]` | **Seed History** — deterministic dynasties/wars | 🔴 `POST /worlds/{w}/seed` (deferred in docs/08) |
-| `uro world backfill PATH` | **Backfill Gaps** preview (AI, provenance-tagged) | 🔴 new endpoint (LLM stage) |
-| `uro world probe PATH [--tries]` | **Probe Capability** — model compatibility report | 🔴 `POST /worlds/{w}/probe` (deferred) |
-| `uro world export WORLD -o FILE` | **Export Bundle** — download a hash-chained `.uwp` | 🔴 `GET /worlds/{w}/export` (deferred) |
-| `uro world import PATH` | **Import Bundle** — upload + verify hash chain | 🔴 `POST /worlds/import` (deferred) |
+| `uro world new NAME` | **New World** form (blank world + default campaign + starter PC) | 🟢 `POST /worlds` (**operator**, D-46) + compose `POST /worlds/{w}/campaigns`; CLI's default-PC convenience replicated client-side |
+| `uro world validate PATH` | **Validate Pack** — upload/paste a pack, show sufficiency grade + gaps | 🟢 `POST /worlds/validate` (multipart, any-authed) (BE-6) |
+| `uro world create PATH [--backfill]` | **Import World from Pack** wizard (optional AI backfill) | 🟡 pack-upload **create** still deferred (JSON-only `POST /worlds` today); backfill-COMMIT rides it (the `backfill` **preview** endpoint ships) |
+| `uro world seed PATH [--seed]` | **Seed History** — deterministic dynasties/wars | 🔴 `POST /worlds/{w}/seed` (carved out — needs the pack manifest re-supplied; rides pack-upload create) |
+| `uro world backfill PATH` | **Backfill Gaps** preview (AI, provenance-tagged) | 🟢 `POST /worlds/backfill` (multipart, **operator**, preview-only) (BE-7) |
+| `uro world probe PATH [--tries]` | **Probe Capability** — model compatibility report | 🟢 `POST /worlds/probe[?tries=]` (multipart, **operator**, warn-not-fail) (BE-7) |
+| `uro world export WORLD -o FILE` | **Export Bundle** — download a hash-chained `.uwp` | 🟢 `GET /worlds/{w}/export` (**operator**, D-45) (BE-8) |
+| `uro world import PATH` | **Import Bundle** — upload + verify hash chain | 🟢 `POST /worlds/import` (**operator**; tampered → 400) (BE-8) |
 
 ### `branch` — timelines
 
 | CLI command | Loom surface | Backend |
 |-------------|--------------|---------|
-| `uro log WORLD [--branch --limit]` | **Commit Log** (git-log style lineage + markers) | 🔴 new lineage endpoint |
-| `uro branch list WORLD` | **Branches** panel (heads, depth, in-fiction day, fork origin) | 🔴 `GET /worlds/{w}/branches` (deferred) |
-| `uro branch fork WORLD --at --name [--time-skip-days]` | **Fork** dialog from any commit/marker (+ time-skip) | 🔴 `POST /worlds/{w}/branches` (deferred) |
-| `uro branch mark WORLD NAME [--branch]` | **Add Marker** at a commit | 🔴 new endpoint |
+| `uro log WORLD [--branch --limit]` | **Commit Log** (git-log style lineage + markers) | 🟢 `GET /worlds/{w}/log` (any-authed) (BE-3) |
+| `uro branch list WORLD` | **Branches** panel (heads, depth, in-fiction day, fork origin) | 🟢 `GET /worlds/{w}/branches` (any-authed) (BE-1) |
+| `uro branch fork WORLD --at --name [--time-skip-days]` | **Fork** dialog from any commit/marker (+ time-skip) | 🟢 `POST /worlds/{w}/branches` (**operator**, D-44) (BE-2) |
+| `uro branch mark WORLD NAME [--branch]` | **Add Marker** at a commit | 🟢 `POST /worlds/{w}/markers` (**operator**, D-44) (BE-3) |
 
 ### `campaign` — play-through lifecycle
 
 | CLI command | Loom surface | Backend |
 |-------------|--------------|---------|
 | `uro campaign new WORLD (--adopt\|--pc)` | **New Campaign** (adopt an actor or fresh PC) | 🟢 `POST /worlds/{w}/campaigns` |
-| `uro campaign end CAMPAIGN --marker` | **End Campaign** (release PCs, mark fork root) | 🔴 new endpoint |
+| `uro campaign end CAMPAIGN --marker` | **End Campaign** (release PCs, mark fork root) | 🟢 `POST /campaigns/{c}/end` (**operator**, D-44) (BE-9) |
 | `uro campaign join CAMPAIGN --participant` | **Join Campaign** (seat a 2nd+ player) | 🟢 `POST /campaigns/{c}/join` |
 
 ### `play` — GM-mode beats
@@ -70,15 +70,15 @@ Legend — **Backend**: 🟢 endpoint exists · 🟡 partial (exists but limited
 |-------------|--------------|---------|
 | `uro play CAMPAIGN` | **Play** — the live session view (stream, scene, mode) | 🟢 WS `/campaigns/{c}/play` |
 | `uro connect CAMPAIGN` | *this is what Loom natively **is*** (a WS play client) | 🟢 WS `/campaigns/{c}/play` |
-| `uro dry-run CAMPAIGN INTENT` | **Preview Beat** — events a beat *would* commit, no write | 🔴 `POST /campaigns/{c}/beats?dry_run=true` (deferred; or a WS dry-run frame) |
-| `uro consistency CAMPAIGN` | **Consistency** metric panel (thesis proxy T2) | 🔴 new endpoint (or fold into `GET /campaigns/{c}`) |
+| `uro dry-run CAMPAIGN INTENT` | **Preview Beat** — events a beat *would* commit, no write | 🟢 `POST /campaigns/{c}/dry-run` (any-authed, intent-only D-37; minted-token campaign-scoped D-46) (BE-5) |
+| `uro consistency CAMPAIGN` | **Consistency** metric panel (thesis proxy T2) | 🟢 `GET /campaigns/{c}/consistency` (any-authed) (BE-5) |
 
 ### `codex` — participant memory
 
 | CLI command | Loom surface | Backend |
 |-------------|--------------|---------|
-| `uro codex add CAMPAIGN TEXT [--pinned --ref]` | **Add Codex Note** (fork-surviving player notes) | 🔴 new endpoint |
-| `uro codex list CAMPAIGN` | **Codex** viewer | 🔴 new endpoint |
+| `uro codex add CAMPAIGN TEXT [--pinned --ref]` | **Add Codex Note** (fork-surviving player notes) | 🟢 `POST /campaigns/{c}/codex` (self-or-admin, D-39) (BE-9) |
+| `uro codex list CAMPAIGN` | **Codex** viewer | 🟢 `GET /campaigns/{c}/codex[?participant=]` (self-or-admin) (BE-9) |
 
 ### `token` — auth
 
@@ -97,18 +97,30 @@ Legend — **Backend**: 🟢 endpoint exists · 🟡 partial (exists but limited
 
 ## Tally
 
-- **🟢 available today (11):** campaign new/join, token mint/revoke, play, connect, world
-  list/create (partial), campaign list/detail, roster, state, chronicle, time-skip, chronicler
-  outcome. → *these fund Loom's first three milestones without touching the engine.*
-- **🔴 needs a new endpoint (13):** world validate/seed/backfill/probe/export/import, branch
-  list/fork/mark, log, dry-run, consistency, campaign end, codex add/list. → *the co-evolution
-  workstream in `uro-server` (see [`04-plan.md`](04-plan.md) §Backend co-evolution).*
+**Update (BE-1…BE-11 epic + D-46 MERGED in `uro`):** the co-evolution workstream is done — all but
+two of the previously-🔴 surfaces now ship, so almost the whole CLI surface has an HTTP endpoint.
+
+- **🟢 available today (~24):** the original 11 (campaign new/join, token mint/revoke, play, connect,
+  world list, campaign list/detail, roster, state, chronicle, time-skip, chronicler outcome) **plus
+  the whole BE epic** — validate, backfill, probe, export, import, branch list, fork, marker, log,
+  events + commit inspector (BE-4), dry-run, consistency, campaign end, codex add/list, usage
+  telemetry, ruleset registry, world-scoped chronicle.
+- **🔴 still needs an endpoint (2):** world **seed** and pack-upload **create** (with which
+  backfill-COMMIT ships) — both carved out because they need the pack manifest re-supplied, tracked
+  as named follow-ups. World `state?at=` (materialize-at-commit) is a third deferred slice.
 - **⚙️ out of scope (2):** db migrate, serve.
 
-> **Honest headline:** Loom can be genuinely useful (observe + play + core lifecycle) against
-> **today's** `uro-server`. Full CLI parity additionally requires ~13 endpoints — mostly the
-> already-designed-but-deferred `docs/08` surface — landed in the engine repo. The plan front-
-> loads the 🟢 work so Loom ships value before the 🔴 endpoints exist.
+**Authority (D-44/D-45/D-46) — the console must respect two tiers.** *Operator* (`--admin-token`):
+create world, fork, marker, import, export, end, backfill, probe, usage, time-skip, and the raw
+event log / commit detail. *Any authed player*: the reads + campaign-lifecycle self-scope. And the
+epistemic boundary (D-45/D-46): `GET /campaigns/{c}/state` gives a **player** only the scene-safe
+sections `{actors,threads,places,factions,pcs}` — `claims`/`beliefs`/`sheets`/`items`/`edges`/
+`counters` require an operator token (403 otherwise). So the timeline/epistemics/authoring surfaces
+are an **operator console**; a player build sees the play + scene-safe reads only.
+
+> **Honest headline:** Loom can now reach almost the entire `uro-server` surface. The remaining gap
+> is two carve-outs (seed, pack-upload create) — the frontend work is no longer backend-blocked; it
+> is wiring M4–M6 to the shipped endpoints, respecting the operator/player tiers above.
 
 ## The WS play protocol (what Loom must speak)
 
@@ -126,7 +138,10 @@ coordination lane** — render them distinctly and never as canonical narration;
 arbitration is server-driven (round-robin/proposal/vote) — Loom reflects `not_your_turn` /
 `proposal_opened` rather than deciding turns itself.
 
-> ⚠️ **Known wire drift to design around:** `docs/08` advertises `campaign_id`/`beat_id` on every
-> envelope and client `encounter_action`/`pin_actor` + server `scene_update`/`mechanics_result`/
-> `mode_change`/`suggestions` frames that `app.py` does **not** emit today. Loom codes to the
-> **actual** frames above; the richer set is a backend co-evolution item, not something to assume.
+> ✅ **Wire drift RESOLVED (BE-11, uro#43).** `docs/08` now documents the WS contract frame-for-frame
+> with `app.py` — the frames above ARE the contract. The previously-advertised `campaign_id`/`beat_id`
+> envelope and `scene_update`/`mode_change`/`mechanics_result`/`suggestions`/`encounter_action`/
+> `pin_actor` frames were a doc overclaim and have been removed. `scene`/`mode` display remains a
+> deliberate **future GROW** on the backend (not drift): encounters auto-resolve inside one beat, so
+> there is no persistent mode state to emit without new engine work — Loom's Play panel says so rather
+> than assuming those frames.
