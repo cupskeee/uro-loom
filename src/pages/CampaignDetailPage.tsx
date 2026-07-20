@@ -52,6 +52,9 @@ export function CampaignDetailPage() {
         <NavLink to="epistemics" className={tab}>
           Epistemics
         </NavLink>
+        <NavLink to="preview" className={tab}>
+          Preview
+        </NavLink>
         <NavLink to="chronicle" className={tab}>
           Chronicle
         </NavLink>

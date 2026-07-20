@@ -243,3 +243,21 @@ test('epistemics (M4): a player token gets the operator-required panel (D-46)', 
   await expect(page.getByTestId('operator-required')).toBeVisible()
   await expect(page.getByTestId('claim-card')).toHaveCount(0)
 })
+
+test('preview (M4): consistency metric + a dry-run that commits nothing', async ({ page }) => {
+  await connect(page)
+  await page.goto('/campaigns/cmp_ashfall/preview')
+  await expect(page.getByTestId('preview-panel')).toBeVisible()
+
+  // The consistency proxy renders a ratio.
+  await expect(page.getByTestId('consistency-card')).toContainText('92%')
+  await expect(page.getByTestId('consistency-card')).toContainText('11 / 12')
+
+  // Dry-run an intent → the would-be events appear, and it says nothing was committed.
+  await page.getByTestId('dryrun-intent').fill('I challenge the warlord')
+  await page.getByTestId('dryrun-submit').click()
+  await expect(page.getByTestId('dryrun-feedback')).toContainText('nothing committed')
+  const events = page.getByTestId('dryrun-events')
+  await expect(events.getByText('BeatResolved')).toBeVisible()
+  await expect(events.getByText('ClaimRecorded')).toBeVisible()
+})

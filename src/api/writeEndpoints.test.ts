@@ -4,6 +4,7 @@ import {
   createCampaign,
   createMarker,
   createWorld,
+  dryRun,
   forkBranch,
   reportOutcome,
   timeSkip,
@@ -91,5 +92,15 @@ describe('M4 timeline writes', () => {
     expect(calls[0].url).toBe('http://s.test/worlds/wld_1/markers')
     expect(calls[0].init.method).toBe('POST')
     expect(JSON.parse(String(calls[0].init.body))).toEqual({ name: 'pre-strike', branch: 'main' })
+  })
+})
+
+describe('M4 slice 4: dry-run', () => {
+  it('dryRun POSTs { intent } to /campaigns/{c}/dry-run', async () => {
+    const calls = capture()
+    await dryRun(conn, 'cmp_1', { intent: 'I kick the door' })
+    expect(calls[0].url).toBe('http://s.test/campaigns/cmp_1/dry-run')
+    expect(calls[0].init.method).toBe('POST')
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({ intent: 'I kick the door' })
   })
 })

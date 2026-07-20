@@ -4,6 +4,7 @@ import {
   getCampaign,
   getChronicle,
   getCommit,
+  getConsistency,
   getEpistemicState,
   getEvents,
   getLog,
@@ -133,5 +134,13 @@ describe('M4 slice 3: epistemic explorer', () => {
     const urls = captureFetch()
     await getEpistemicState(conn, 'cmp_1')
     expect(urls[0]).toBe('http://server.test/campaigns/cmp_1/state?sections=claims,beliefs')
+  })
+})
+
+describe('M4 slice 4: consistency read', () => {
+  it('getConsistency → GET /campaigns/{c}/consistency', async () => {
+    const urls = captureFetch()
+    await getConsistency(conn, 'cmp_1')
+    expect(urls[0]).toBe('http://server.test/campaigns/cmp_1/consistency')
   })
 })

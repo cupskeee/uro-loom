@@ -15,11 +15,11 @@ function causeTone(kind: string): 'neutral' | 'indigo' | 'amber' | 'red' | 'gree
   return 'green' // narrator, actor, …
 }
 
-function EventRow({ e }: { e: EventEnvelope }) {
+export function EventRow({ e }: { e: EventEnvelope }) {
   return (
     <li className="py-2" data-testid="event-row">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-neutral-600">#{e.seq}</span>
+        {e.seq != null && <span className="text-xs text-neutral-600">#{e.seq}</span>}
         <span className="font-medium text-neutral-200">{e.event_type}</span>
         <Badge tone={causeTone(e.caused_by.kind)}>{e.caused_by.kind}</Badge>
         {e.world_time.day != null ? (

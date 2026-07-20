@@ -9,11 +9,14 @@ import type {
   CampaignState,
   ChronicleResponse,
   CommitDetail,
+  ConsistencyResponse,
   CreateCampaignRequest,
   CreateCampaignResponse,
   CreateMarkerRequest,
   CreateWorldRequest,
   CreateWorldResponse,
+  DryRunRequest,
+  DryRunResponse,
   EpistemicState,
   EventFilters,
   EventsResponse,
@@ -118,6 +121,17 @@ export function getEpistemicState(
     `/campaigns/${enc(campaignId)}/state?sections=claims,beliefs`,
     { signal },
   )
+}
+
+/** GET /campaigns/{id}/consistency → the T2 contradiction-survival proxy. Any-authed. */
+export function getConsistency(
+  conn: Connection,
+  campaignId: string,
+  signal?: AbortSignal,
+): Promise<ConsistencyResponse> {
+  return apiFetch<ConsistencyResponse>(conn, `/campaigns/${enc(campaignId)}/consistency`, {
+    signal,
+  })
 }
 
 // ---- M4: timelines (world-scoped reads) ----------------------------------------
@@ -283,4 +297,19 @@ export function createMarker(
   body: CreateMarkerRequest,
 ): Promise<Marker> {
   return apiFetch<Marker>(conn, `/worlds/${enc(worldId)}/markers`, { method: 'POST', body })
+}
+
+/**
+ * POST /campaigns/{id}/dry-run — preview the events a beat WOULD commit, writing
+ * nothing. Any-authed; INTENT-ONLY (no client plan=, D-37).
+ */
+export function dryRun(
+  conn: Connection,
+  campaignId: string,
+  body: DryRunRequest,
+): Promise<DryRunResponse> {
+  return apiFetch<DryRunResponse>(conn, `/campaigns/${enc(campaignId)}/dry-run`, {
+    method: 'POST',
+    body,
+  })
 }

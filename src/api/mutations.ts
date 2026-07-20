@@ -8,6 +8,7 @@ import {
   createCampaign,
   createMarker,
   createWorld,
+  dryRun,
   forkBranch,
   joinCampaign,
   mintToken,
@@ -19,6 +20,7 @@ import type {
   CreateCampaignRequest,
   CreateMarkerRequest,
   CreateWorldRequest,
+  DryRunRequest,
   ForkRequest,
   JoinCampaignRequest,
   MintTokenRequest,
@@ -115,5 +117,14 @@ export function useCreateMarker(worldId: string) {
       qc.invalidateQueries({ queryKey: ['branches', connection?.baseUrl, worldId] })
       qc.invalidateQueries({ queryKey: ['log', connection?.baseUrl, worldId] })
     },
+  })
+}
+
+// ---- M4 slice 4: dry-run (a beat preview; commits nothing, so no invalidation) --
+
+export function useDryRun(campaignId: string) {
+  const { connection } = useConnection()
+  return useMutation({
+    mutationFn: (body: DryRunRequest) => dryRun(connection!, campaignId, body),
   })
 }

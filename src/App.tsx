@@ -13,6 +13,7 @@ import { PlayPanel } from './pages/panels/PlayPanel'
 import { RosterPanel } from './pages/panels/RosterPanel'
 import { StatePanel } from './pages/panels/StatePanel'
 import { EpistemicsPanel } from './pages/panels/EpistemicsPanel'
+import { PreviewPanel } from './pages/panels/PreviewPanel'
 import { ChroniclePanel } from './pages/panels/ChroniclePanel'
 import { ManagePanel } from './pages/panels/ManagePanel'
 
@@ -40,6 +41,7 @@ export function App() {
           <Route path="roster" element={<RosterPanel />} />
           <Route path="state" element={<StatePanel />} />
           <Route path="epistemics" element={<EpistemicsPanel />} />
+          <Route path="preview" element={<PreviewPanel />} />
           <Route path="chronicle" element={<ChroniclePanel />} />
           <Route path="manage" element={<ManagePanel />} />
         </Route>
