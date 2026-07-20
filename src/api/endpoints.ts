@@ -42,9 +42,11 @@ import type {
   RevokeTokenRequest,
   RevokeTokenResponse,
   RosterResponse,
+  RulesetsResponse,
   ServerInfo,
   TimeSkipRequest,
   TimeSkipResponse,
+  UsageResponse,
   World,
   WorldBundle,
 } from './types'
@@ -405,4 +407,21 @@ export function addCodexNote(
     method: 'POST',
     body,
   })
+}
+
+// ---- M6 slice 1: ops (ruleset registry + usage telemetry) ----------------------
+
+/** GET /rulesets → the bound ruleset registry (any-authed). */
+export function getRulesets(conn: Connection, signal?: AbortSignal): Promise<RulesetsResponse> {
+  return apiFetch<RulesetsResponse>(conn, '/rulesets', { signal })
+}
+
+/** GET /usage[?stage=] → LLM-call telemetry by stage (OPERATOR-only, D-44). */
+export function getUsage(
+  conn: Connection,
+  stage?: string,
+  signal?: AbortSignal,
+): Promise<UsageResponse> {
+  const q = stage ? `?stage=${enc(stage)}` : ''
+  return apiFetch<UsageResponse>(conn, `/usage${q}`, { signal })
 }

@@ -133,16 +133,16 @@ Goal: the pack pipeline in the browser. Backend items **BE-6…BE-9**.
 (tamper rejected); end a campaign + keep fork-surviving codex notes — all in the browser. _Seed +
 pack-upload-create stay the deferred engine carve-outs._
 
-## M6 — Identity & ops (Loom-owned) — optional / multi-tenant
+## M6 — Identity & ops (Loom-owned) — optional / multi-tenant  🟡 in progress
 
 Goal: what the engine deliberately refuses to own.
 
 - **Own identity layer** (accounts/login/orgs) behind a **BFF** that holds Uro tokens and proxies
   calls; the browser never sees an admin token. Finer per-actor authorization enforced at the BFF
   (Uro authority is coarse).
-- **Usage & telemetry** dashboards + any **billing/quota** UX, fed by `GET /usage` (BE-10).
+- ✅ **Usage & telemetry** dashboard (shipped) — an **Ops** page: `GET /usage` by stage (operator, D-44; `?world=`/`?campaign=`→400) + the ruleset registry viewer (`GET /rulesets`, any-authed, id@version + sheet shape). Billing/quota UX + the reaction-layer/rule-pack viewer (no endpoint yet) remain.
 - Any **content guardrails/moderation** Loom needs, at Loom's layer.
-- **Ruleset viewer** + **reaction-layer/rule-pack viewer**.
+- ✅ **Ruleset viewer** (shipped, on the Ops page). **Reaction-layer/rule-pack viewer** — no dedicated endpoint yet (the pack rides `WorldGenesis`); deferred.
 
 **Exit:** a multi-user deploy where real accounts map to Uro tokens, with usage visibility.
 

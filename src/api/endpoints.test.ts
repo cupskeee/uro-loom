@@ -11,6 +11,8 @@ import {
   exportWorld,
   getLog,
   getRoster,
+  getRulesets,
+  getUsage,
   listBranches,
   listCampaigns,
   listWorlds,
@@ -165,5 +167,23 @@ describe('M5 slice 3: codex read', () => {
     const urls = captureFetch()
     await getCodex(conn, 'cmp_1', 'player 2')
     expect(urls[0]).toBe('http://server.test/campaigns/cmp_1/codex?participant=player%202')
+  })
+})
+
+describe('M6 slice 1: ops reads', () => {
+  it('getRulesets → GET /rulesets', async () => {
+    const urls = captureFetch()
+    await getRulesets(conn)
+    expect(urls[0]).toBe('http://server.test/rulesets')
+  })
+  it('getUsage → GET /usage (no stage)', async () => {
+    const urls = captureFetch()
+    await getUsage(conn)
+    expect(urls[0]).toBe('http://server.test/usage')
+  })
+  it('getUsage passes ?stage=', async () => {
+    const urls = captureFetch()
+    await getUsage(conn, 'narrator')
+    expect(urls[0]).toBe('http://server.test/usage?stage=narrator')
   })
 })

@@ -4,6 +4,7 @@ import { ConnectionScreen } from './components/ConnectionScreen'
 import { Layout } from './components/Layout'
 import { WorldsPage } from './pages/WorldsPage'
 import { AuthoringPage } from './pages/AuthoringPage'
+import { OpsPage } from './pages/OpsPage'
 import { WorldDetailPage } from './pages/WorldDetailPage'
 import { TimelinePanel } from './pages/panels/TimelinePanel'
 import { EventsPanel } from './pages/panels/EventsPanel'
@@ -37,6 +38,7 @@ export function App() {
           <Route path="events" element={<EventsPanel />} />
         </Route>
         <Route path="authoring" element={<AuthoringPage />} />
+        <Route path="ops" element={<OpsPage />} />
         <Route path="campaigns" element={<CampaignsPage />} />
         <Route path="campaigns/:campaignId" element={<CampaignDetailPage />}>
           <Route index element={<OverviewPanel />} />

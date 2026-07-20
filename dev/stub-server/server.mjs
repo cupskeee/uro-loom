@@ -994,8 +994,92 @@ const server = createServer((req, res) => {
     return send(res, 200, { consistent, total, ratio: consistent / total })
   }
 
-  // A deliberately-unwired endpoint, so Loom's 501 handling has something to hit.
-  if (p === '/usage') return send(res, 501, { detail: 'not supported by this server' })
+  // M6 slice 1: GET /rulesets — the bound registry (any-authed).
+  if (req.method === 'GET' && p === '/rulesets') {
+    return send(res, 200, {
+      rulesets: [
+        {
+          id: 'uro-basic',
+          version: '0',
+          sheet_schema: {
+            title: 'd20 sheet',
+            type: 'object',
+            properties: {
+              hp: { type: 'integer' },
+              ac: { type: 'integer' },
+              level: { type: 'integer' },
+            },
+            required: ['hp', 'ac'],
+          },
+        },
+        {
+          id: 'uro-pbta',
+          version: '0',
+          sheet_schema: {
+            title: 'PbtA sheet',
+            type: 'object',
+            properties: {
+              stats: { type: 'object' },
+              harm: { type: 'integer' },
+              conditions: { type: 'array' },
+            },
+            required: ['stats', 'harm'],
+          },
+        },
+      ],
+    })
+  }
+
+  // M6 slice 1: GET /usage[?stage=] — LLM-call telemetry (OPERATOR-only, D-44). ?world=/?campaign=
+  // aren't keyed on the rows yet → 400 (honest), never a silent no-op.
+  if (req.method === 'GET' && p === '/usage') {
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    for (const bad of ['world', 'campaign']) {
+      if (url.searchParams.get(bad))
+        return send(res, 400, { detail: `filtering usage by '${bad}' is not supported yet` })
+    }
+    const stage = url.searchParams.get('stage') || null
+    const all = [
+      {
+        stage_tag: 'narrator',
+        model: 'gpt-x',
+        calls: 19098,
+        tokens_in: 4_100_000,
+        tokens_out: 2_300_000,
+        avg_latency_ms: 820,
+      },
+      {
+        stage_tag: 'extractor',
+        model: 'gpt-x',
+        calls: 18643,
+        tokens_in: 3_800_000,
+        tokens_out: 900_000,
+        avg_latency_ms: 610,
+      },
+      {
+        stage_tag: 'planner',
+        model: 'gpt-x',
+        calls: 3102,
+        tokens_in: 700_000,
+        tokens_out: 120_000,
+        avg_latency_ms: 540,
+      },
+      {
+        stage_tag: 'embedder',
+        model: null,
+        calls: 38154,
+        tokens_in: 0,
+        tokens_out: 0,
+        avg_latency_ms: 12,
+      },
+    ]
+    const by_stage = stage ? all.filter((r) => r.stage_tag === stage) : all
+    return send(res, 200, {
+      stage,
+      total_calls: by_stage.reduce((n, r) => n + r.calls, 0),
+      by_stage,
+    })
+  }
 
   return send(res, 404, { detail: 'not found' })
 })
