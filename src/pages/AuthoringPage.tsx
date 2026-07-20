@@ -1,7 +1,15 @@
 import { type ChangeEvent, type FormEvent, useState } from 'react'
-import { useBackfillPack, useProbePack, useValidatePack } from '../api/mutations'
+import { Link } from 'react-router-dom'
+import {
+  useBackfillPack,
+  useExportWorld,
+  useImportWorld,
+  useProbePack,
+  useValidatePack,
+} from '../api/mutations'
+import { useWorlds } from '../api/queries'
 import { errorMessage, isForbidden } from '../api/errors'
-import type { BackfillResponse, ProbeResponse, ValidateResponse } from '../api/types'
+import type { BackfillResponse, ProbeResponse, ValidateResponse, WorldBundle } from '../api/types'
 import { Badge, Card, IdChip, PageHeading } from '../components/ui'
 import { Feedback, Submit } from '../components/forms'
 
@@ -194,6 +202,123 @@ function ProbeResultView({ r }: { r: ProbeResponse }) {
   )
 }
 
+function ExportCard() {
+  const worlds = useWorlds()
+  const m = useExportWorld()
+  const [worldId, setWorldId] = useState('')
+
+  function run(e: FormEvent) {
+    e.preventDefault()
+    m.reset()
+    if (!worldId) return
+    m.mutate(worldId, {
+      onSuccess: (bundle) => {
+        // download the bundle as a .uwp (JSON blob)
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${bundle.world_name || 'world'}.uwp`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+      },
+    })
+  }
+
+  return (
+    <Card className="p-4">
+      <form onSubmit={run} className="flex flex-wrap items-center gap-2">
+        <h2 className="text-sm font-semibold text-neutral-200">Export</h2>
+        <span className="text-xs text-neutral-500">
+          download a hash-chained .uwp · operator (D-45)
+        </span>
+        <select
+          data-testid="export-world"
+          value={worldId}
+          onChange={(e) => setWorldId(e.target.value)}
+          className="ml-auto rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm"
+        >
+          <option value="">select a world…</option>
+          {(worlds.data ?? []).map((w) => (
+            <option key={w.world_id} value={w.world_id}>
+              {w.name}
+            </option>
+          ))}
+        </select>
+        <Submit pending={m.isPending} disabled={!worldId} testid="export-run">
+          Export
+        </Submit>
+      </form>
+      <Feedback
+        testid="export-feedback"
+        error={m.isError ? writeError(m.error) : null}
+        success={m.isSuccess ? <span>downloaded {m.data.world_name}.uwp</span> : null}
+      />
+    </Card>
+  )
+}
+
+function ImportCard() {
+  const m = useImportWorld()
+  const [file, setFile] = useState<File | null>(null)
+  const [parseErr, setParseErr] = useState<string | null>(null)
+
+  async function run(e: FormEvent) {
+    e.preventDefault()
+    m.reset()
+    setParseErr(null)
+    if (!file) return
+    let bundle: WorldBundle
+    try {
+      bundle = JSON.parse(await file.text()) as WorldBundle
+    } catch {
+      setParseErr('That file is not valid JSON — pick a .uwp bundle.')
+      return
+    }
+    m.mutate(bundle)
+  }
+
+  return (
+    <Card className="p-4">
+      <form onSubmit={run} className="flex flex-wrap items-center gap-2">
+        <h2 className="text-sm font-semibold text-neutral-200">Import</h2>
+        <span className="text-xs text-neutral-500">
+          upload a .uwp; the chain is verified — a tampered bundle is rejected · operator
+        </span>
+        <input
+          type="file"
+          accept=".uwp,.json,application/json"
+          onChange={(ev) => setFile(ev.target.files?.[0] ?? null)}
+          data-testid="import-file"
+          className="ml-auto text-xs text-neutral-400 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-800 file:px-3 file:py-1.5 file:text-neutral-200"
+        />
+        <Submit pending={m.isPending} disabled={!file} testid="import-run">
+          Import
+        </Submit>
+      </form>
+      <Feedback
+        testid="import-feedback"
+        error={parseErr ?? (m.isError ? writeError(m.error) : null)}
+        success={
+          m.isSuccess ? (
+            <span>
+              imported <IdChip>{m.data.world_id}</IdChip> ({m.data.name}) ·{' '}
+              <Link
+                to={`/worlds/${encodeURIComponent(m.data.world_id)}`}
+                className="text-indigo-300 hover:text-indigo-200"
+              >
+                open →
+              </Link>
+            </span>
+          ) : null
+        }
+      />
+    </Card>
+  )
+}
+
 export function AuthoringPage() {
   const [file, setFile] = useState<File | null>(null)
 
@@ -204,8 +329,8 @@ export function AuthoringPage() {
   return (
     <section data-testid="authoring-page">
       <PageHeading
-        title="Pack Authoring"
-        subtitle="Upload a world-pack .zip → validate, AI-backfill (operator), or probe the model (operator). No world is created here."
+        title="Authoring & Portability"
+        subtitle="Upload a world-pack .zip → validate / AI-backfill / probe (operator). Export a world to a hash-chained .uwp, or import one. No world is created except by import."
       />
       <Card className="mb-4 p-4">
         <label className="flex flex-wrap items-center gap-3 text-sm">
@@ -225,6 +350,14 @@ export function AuthoringPage() {
         <ValidateCard file={file} />
         <BackfillCard file={file} />
         <ProbeCard file={file} />
+      </div>
+
+      <h2 className="mb-3 mt-6 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        World portability
+      </h2>
+      <div className="grid gap-4">
+        <ExportCard />
+        <ImportCard />
       </div>
     </section>
   )

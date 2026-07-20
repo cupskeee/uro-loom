@@ -309,3 +309,55 @@ test('authoring (M5): a player can validate but backfill needs an operator token
   await page.getByTestId('backfill-run').click()
   await expect(page.getByTestId('backfill-feedback')).toContainText('Operator token required')
 })
+
+function bundleFile(worldName: string) {
+  return {
+    name: `${worldName}.uwp`,
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({ world_name: worldName, commits: [], branches: [], manifest_hash: 'h_x' }),
+    ),
+  }
+}
+
+test('export/import (M5): operator exports a .uwp and imports one; tamper is rejected', async ({
+  page,
+}) => {
+  await connect(page) // dev-token → operator
+  await page.goto('/authoring')
+  await expect(page.getByTestId('authoring-page')).toBeVisible()
+
+  // Export: pick a world → the browser downloads a .uwp.
+  await page.getByTestId('export-world').selectOption('wld_ashfall')
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('export-run').click(),
+  ])
+  expect(download.suggestedFilename()).toBe('Ashfall.uwp')
+  await expect(page.getByTestId('export-feedback')).toContainText('downloaded')
+
+  // Import a valid bundle → a fresh world appears.
+  await page.getByTestId('import-file').setInputFiles(bundleFile('Reimported'))
+  await page.getByTestId('import-run').click()
+  await expect(page.getByTestId('import-feedback')).toContainText('imported')
+
+  // Import a TAMPERED bundle → a clear verification error (nothing written).
+  await page.getByTestId('import-file').setInputFiles(bundleFile('TAMPERED'))
+  await page.getByTestId('import-run').click()
+  await expect(page.getByTestId('import-feedback')).toContainText('failed verification')
+})
+
+test('export/import (M5): a player cannot export (operator-only, D-45)', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('server-url').fill(STUB_URL)
+  await page.getByTestId('token').fill('player-1')
+  await page.getByTestId('connect').click()
+  await expect(page.getByTestId('health-badge')).toHaveAttribute('data-status', 'ok', {
+    timeout: 10_000,
+  })
+
+  await page.goto('/authoring')
+  await page.getByTestId('export-world').selectOption('wld_ashfall')
+  await page.getByTestId('export-run').click()
+  await expect(page.getByTestId('export-feedback')).toContainText('Operator token required')
+})

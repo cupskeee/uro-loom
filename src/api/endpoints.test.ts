@@ -7,6 +7,7 @@ import {
   getConsistency,
   getEpistemicState,
   getEvents,
+  exportWorld,
   getLog,
   getRoster,
   listBranches,
@@ -142,5 +143,13 @@ describe('M4 slice 4: consistency read', () => {
     const urls = captureFetch()
     await getConsistency(conn, 'cmp_1')
     expect(urls[0]).toBe('http://server.test/campaigns/cmp_1/consistency')
+  })
+})
+
+describe('M5 slice 2: export', () => {
+  it('exportWorld → GET /worlds/{w}/export', async () => {
+    const urls = captureFetch()
+    await exportWorld(conn, 'wld_1')
+    expect(urls[0]).toBe('http://server.test/worlds/wld_1/export')
   })
 })

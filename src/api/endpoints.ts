@@ -24,6 +24,7 @@ import type {
   ForkRequest,
   ForkResponse,
   Health,
+  ImportWorldResponse,
   JoinCampaignRequest,
   JoinCampaignResponse,
   LogResponse,
@@ -41,6 +42,7 @@ import type {
   TimeSkipRequest,
   TimeSkipResponse,
   World,
+  WorldBundle,
 } from './types'
 
 const enc = encodeURIComponent
@@ -348,4 +350,21 @@ export function probePack(conn: Connection, file: File, tries?: number): Promise
     method: 'POST',
     body: packForm(file),
   })
+}
+
+/** GET /worlds/{world_id}/export → the world's hash-chained bundle (OPERATOR-only, D-45). */
+export function exportWorld(
+  conn: Connection,
+  worldId: string,
+  signal?: AbortSignal,
+): Promise<WorldBundle> {
+  return apiFetch<WorldBundle>(conn, `/worlds/${enc(worldId)}/export`, { signal })
+}
+
+/**
+ * POST /worlds/import — verify a bundle's hash chain, then instantiate a fresh world
+ * (OPERATOR-only, D-44). A tampered/malformed bundle → 400 before any write.
+ */
+export function importWorld(conn: Connection, bundle: WorldBundle): Promise<ImportWorldResponse> {
+  return apiFetch<ImportWorldResponse>(conn, '/worlds/import', { method: 'POST', body: bundle })
 }

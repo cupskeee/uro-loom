@@ -577,6 +577,26 @@ function handlePackUpload(p, url, res, token) {
 
 // Write endpoints (M3 + M4). Mutations are in-memory and live for the process lifetime.
 function handlePost(p, body, res, token) {
+  // M5 slice 2: import a world bundle (OPERATOR-only, D-44). The real server recomputes the
+  // SHA-256 chain; the stub models the outcome — a malformed or tampered bundle → 400 before
+  // any write, else a fresh remapped world.
+  if (p === '/worlds/import') {
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    if (!body || typeof body.world_name !== 'string')
+      return send(res, 400, { detail: 'malformed bundle: missing world_name' })
+    if (body.world_name === 'TAMPERED')
+      return send(res, 400, {
+        detail: 'bundle failed verification — the world name or chain was altered in transit',
+      })
+    const world = {
+      world_id: nextId('wld_imported'),
+      name: body.world_name,
+      main_branch_id: nextId('br'),
+    }
+    WORLDS.push(world)
+    return send(res, 200, world)
+  }
+
   // M4 slice 4: dry-run a beat (any-authed; commits NOTHING).
   const mdr = p.match(/^\/campaigns\/([^/]+)\/dry-run$/)
   if (mdr) {
@@ -790,6 +810,25 @@ const server = createServer((req, res) => {
     const wid = decodeURIComponent(mb[1])
     if (!WORLDS.find((w) => w.world_id === wid)) return send(res, 404, { detail: 'no such world' })
     return send(res, 200, { branches: BRANCHES[wid] ?? [], markers: MARKERS[wid] ?? [] })
+  }
+
+  // M5 slice 2: GET /worlds/{w}/export → a hash-chained bundle. OPERATOR-only (D-45).
+  const mex = p.match(/^\/worlds\/([^/]+)\/export$/)
+  if (req.method === 'GET' && mex) {
+    const wid = decodeURIComponent(mex[1])
+    const world = WORLDS.find((w) => w.world_id === wid)
+    if (!world) return send(res, 404, { detail: 'no such world' })
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    return send(res, 200, {
+      world_name: world.name,
+      commits: (LOG[BRANCHES[wid]?.[0]?.branch_id] ?? []).map((c) => ({
+        commit_id: c.commit_id,
+        depth: c.depth,
+      })),
+      branches: (BRANCHES[wid] ?? []).map((b) => ({ branch_id: b.branch_id, name: b.name })),
+      markers: MARKERS[wid] ?? [],
+      manifest_hash: `h_${wid}`,
+    })
   }
 
   // M4: GET /worlds/{w}/log[?branch=&limit=] → { branch, commits } (head→genesis).
