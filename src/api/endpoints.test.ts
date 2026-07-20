@@ -3,6 +3,8 @@ import { type Connection } from './client'
 import {
   getCampaign,
   getChronicle,
+  getCommit,
+  getEvents,
   getLog,
   getRoster,
   listBranches,
@@ -93,5 +95,34 @@ describe('M4 timeline reads', () => {
     const urls = captureFetch()
     await getLog(conn, 'wld_1', undefined, 0)
     expect(urls[0]).toBe('http://server.test/worlds/wld_1/log?limit=0')
+  })
+})
+
+describe('M4 slice 2: events + commit detail', () => {
+  it('getEvents with no filters → /worlds/{w}/events', async () => {
+    const urls = captureFetch()
+    await getEvents(conn, 'wld_1')
+    expect(urls[0]).toBe('http://server.test/worlds/wld_1/events')
+  })
+
+  it('getEvents maps entityRef→entity_ref, causedBy→caused_by, and passes all filters', async () => {
+    const urls = captureFetch()
+    await getEvents(conn, 'wld_1', {
+      branch: 'what-if',
+      type: 'ClaimRecorded',
+      entityRef: 'a:hero',
+      causedBy: 'player_action',
+      limit: 25,
+    })
+    expect(urls[0]).toBe(
+      'http://server.test/worlds/wld_1/events?branch=what-if&type=ClaimRecorded' +
+        '&entity_ref=a%3Ahero&caused_by=player_action&limit=25',
+    )
+  })
+
+  it('getCommit encodes the commit id', async () => {
+    const urls = captureFetch()
+    await getCommit(conn, 'wld_1', 'cmt/9')
+    expect(urls[0]).toBe('http://server.test/worlds/wld_1/commits/cmt%2F9')
   })
 })

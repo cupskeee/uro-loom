@@ -8,12 +8,15 @@ import {
   getCampaign,
   getCampaignState,
   getChronicle,
+  getCommit,
+  getEvents,
   getLog,
   getRoster,
   listBranches,
   listCampaigns,
   listWorlds,
 } from './endpoints'
+import type { EventFilters } from './types'
 
 export function useWorlds() {
   const { connection } = useConnection()
@@ -86,5 +89,34 @@ export function useLog(worldId: string, branch?: string, limit?: number) {
     queryKey: ['log', connection?.baseUrl, worldId, branch ?? 'main', limit ?? null],
     enabled: !!connection && !!worldId,
     queryFn: ({ signal }) => getLog(connection!, worldId, branch, limit, signal),
+  })
+}
+
+// ---- M4 slice 2: event-log inspector + commit detail (operator-only, D-45) ------
+
+export function useEvents(worldId: string, filters: EventFilters) {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: [
+      'events',
+      connection?.baseUrl,
+      worldId,
+      filters.branch ?? 'main',
+      filters.type ?? null,
+      filters.entityRef ?? null,
+      filters.causedBy ?? null,
+      filters.limit ?? null,
+    ],
+    enabled: !!connection && !!worldId,
+    queryFn: ({ signal }) => getEvents(connection!, worldId, filters, signal),
+  })
+}
+
+export function useCommit(worldId: string, commitId: string) {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['commit', connection?.baseUrl, worldId, commitId],
+    enabled: !!connection && !!worldId && !!commitId,
+    queryFn: ({ signal }) => getCommit(connection!, worldId, commitId, signal),
   })
 }

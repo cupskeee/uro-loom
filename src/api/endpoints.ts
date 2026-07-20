@@ -8,11 +8,14 @@ import type {
   Campaign,
   CampaignState,
   ChronicleResponse,
+  CommitDetail,
   CreateCampaignRequest,
   CreateCampaignResponse,
   CreateMarkerRequest,
   CreateWorldRequest,
   CreateWorldResponse,
+  EventFilters,
+  EventsResponse,
   ForkRequest,
   ForkResponse,
   Health,
@@ -124,6 +127,40 @@ export function getLog(
   if (limit != null) params.set('limit', String(limit))
   const q = params.toString()
   return apiFetch<LogResponse>(conn, `/worlds/${enc(worldId)}/log${q ? `?${q}` : ''}`, { signal })
+}
+
+/**
+ * GET /worlds/{world_id}/events — the raw event log along a branch, filterable.
+ * OPERATOR-only (D-45): the raw log is omniscient. A player token → 403.
+ */
+export function getEvents(
+  conn: Connection,
+  worldId: string,
+  filters: EventFilters = {},
+  signal?: AbortSignal,
+): Promise<EventsResponse> {
+  const params = new URLSearchParams()
+  if (filters.branch) params.set('branch', filters.branch)
+  if (filters.type) params.set('type', filters.type)
+  if (filters.entityRef) params.set('entity_ref', filters.entityRef)
+  if (filters.causedBy) params.set('caused_by', filters.causedBy)
+  if (filters.limit != null) params.set('limit', String(filters.limit))
+  const q = params.toString()
+  return apiFetch<EventsResponse>(conn, `/worlds/${enc(worldId)}/events${q ? `?${q}` : ''}`, {
+    signal,
+  })
+}
+
+/** GET /worlds/{world_id}/commits/{commit_id} → one commit's events. OPERATOR-only (D-45). */
+export function getCommit(
+  conn: Connection,
+  worldId: string,
+  commitId: string,
+  signal?: AbortSignal,
+): Promise<CommitDetail> {
+  return apiFetch<CommitDetail>(conn, `/worlds/${enc(worldId)}/commits/${enc(commitId)}`, {
+    signal,
+  })
 }
 
 // ---- Writes (M3 operate + M4 timeline writes) ----------------------------------

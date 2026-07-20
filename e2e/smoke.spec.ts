@@ -151,3 +151,58 @@ test('timeline (M4): branches + commit log render; fork + marker (operator) succ
   await page.getByTestId('marker-submit').click()
   await expect(page.getByTestId('marker-feedback')).toContainText('marked at')
 })
+
+test('events (M4): operator inspects the raw log, filters, and a commit', async ({ page }) => {
+  await connect(page) // dev-token → operator
+
+  await page.goto('/worlds/wld_ashfall/events')
+  await expect(page.getByTestId('events-panel')).toBeVisible()
+
+  // The raw log renders (operator-only) — a ClaimRecorded event is present.
+  await expect(page.getByTestId('event-row').filter({ hasText: 'ClaimRecorded' })).toBeVisible()
+
+  // Filter to ClaimRecorded and confirm the omniscient truth value is in its payload.
+  await page.getByTestId('ev-type').fill('ClaimRecorded')
+  await page.getByTestId('ev-search').click()
+  const claim = page.getByTestId('event-row').filter({ hasText: 'ClaimRecorded' })
+  await expect(claim).toBeVisible()
+  await claim.getByText('payload').click()
+  await expect(claim.getByText(/"truth": "true"/)).toBeVisible()
+
+  // Inspect a commit by id → its events show.
+  await page.getByTestId('commit-input').fill('cmt_a3')
+  await page.getByTestId('commit-lookup').click()
+  await expect(page.getByTestId('commit-detail')).toContainText('cmt_a3')
+  await expect(page.getByTestId('commit-detail').getByText('ClaimRecorded')).toBeVisible()
+})
+
+test('events (M4): the timeline "inspect →" deep-links into a commit', async ({ page }) => {
+  await connect(page)
+  await page.getByRole('link', { name: /Ashfall/ }).click()
+  await expect(page.getByTestId('timeline-panel')).toBeVisible()
+
+  // Click "inspect →" on a log row → lands on the Events tab with that commit selected.
+  await page
+    .getByTestId('log-row')
+    .filter({ hasText: 'a warning is spoken' })
+    .getByTestId('inspect-commit')
+    .click()
+  await expect(page.getByTestId('events-panel')).toBeVisible()
+  await expect(page.getByTestId('commit-detail')).toContainText('cmt_a3')
+})
+
+test('events (M4): a player token gets the operator-required panel, not the log (D-45)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByTestId('server-url').fill(STUB_URL)
+  await page.getByTestId('token').fill('player-1') // the stub treats player* as a non-operator
+  await page.getByTestId('connect').click()
+  await expect(page.getByTestId('health-badge')).toHaveAttribute('data-status', 'ok', {
+    timeout: 10_000,
+  })
+
+  await page.goto('/worlds/wld_ashfall/events')
+  await expect(page.getByTestId('operator-required')).toBeVisible()
+  await expect(page.getByTestId('event-row')).toHaveCount(0)
+})

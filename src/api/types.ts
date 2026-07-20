@@ -270,3 +270,44 @@ export interface CreateMarkerRequest {
   name: string
   branch?: string
 }
+
+// ---- M4 slice 2: event-log inspector + commit detail (BE-4, OPERATOR-only D-45) -
+
+/**
+ * One raw event (an element of GET /worlds/{w}/events and of a commit's events).
+ * The raw log is omniscient — `caused_by`, `payload`, and `ClaimRecorded` truth
+ * values live here — so these endpoints are operator-only (D-45), never a player read.
+ */
+export interface EventEnvelope {
+  event_id: string
+  seq: number
+  event_type: string
+  entity_refs: string[]
+  world_time: { day?: number; segment?: string; [k: string]: unknown }
+  caused_by: { kind: string; [k: string]: unknown }
+  payload: Record<string, unknown>
+}
+
+/** GET /worlds/{w}/events[?branch=&type=&entity_ref=&caused_by=&limit=]. */
+export interface EventsResponse {
+  branch: string
+  events: EventEnvelope[]
+}
+
+/** Filters for the event-log inspector (all optional). */
+export interface EventFilters {
+  branch?: string
+  type?: string
+  entityRef?: string
+  causedBy?: string
+  limit?: number
+}
+
+/** GET /worlds/{w}/commits/{id} → one commit's metadata + ordered events. */
+export interface CommitDetail {
+  commit_id: string
+  parent_id: string | null
+  depth: number
+  commit_hash: string
+  events: EventEnvelope[]
+}
