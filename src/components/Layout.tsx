@@ -22,6 +22,9 @@ export function Layout() {
             <NavLink to="/campaigns" className={navItem}>
               Campaigns
             </NavLink>
+            <NavLink to="/authoring" className={navItem}>
+              Authoring
+            </NavLink>
           </nav>
         </div>
         <div className="flex items-center gap-3">

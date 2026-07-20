@@ -5,6 +5,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useConnection } from '../config/connection'
 import {
+  backfillPack,
   createCampaign,
   createMarker,
   createWorld,
@@ -12,6 +13,8 @@ import {
   forkBranch,
   joinCampaign,
   mintToken,
+  probePack,
+  validatePack,
   reportOutcome,
   revokeToken,
   timeSkip,
@@ -126,5 +129,26 @@ export function useDryRun(campaignId: string) {
   const { connection } = useConnection()
   return useMutation({
     mutationFn: (body: DryRunRequest) => dryRun(connection!, campaignId, body),
+  })
+}
+
+// ---- M5 slice 1: pack authoring (upload → validate / backfill / probe) ----------
+// These operate on an uploaded pack file, not stored world state, so no invalidation.
+
+export function useValidatePack() {
+  const { connection } = useConnection()
+  return useMutation({ mutationFn: (file: File) => validatePack(connection!, file) })
+}
+
+export function useBackfillPack() {
+  const { connection } = useConnection()
+  return useMutation({ mutationFn: (file: File) => backfillPack(connection!, file) })
+}
+
+export function useProbePack() {
+  const { connection } = useConnection()
+  return useMutation({
+    mutationFn: (args: { file: File; tries?: number }) =>
+      probePack(connection!, args.file, args.tries),
   })
 }

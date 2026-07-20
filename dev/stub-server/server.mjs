@@ -508,6 +508,73 @@ function slug(s) {
   return out || 'x'
 }
 
+// M5: pack-upload authoring (multipart). The stub returns canned results without parsing the
+// .zip — validate is any-authed; backfill/probe are operator-only (a player* token → 403).
+function handlePackUpload(p, url, res, token) {
+  if (p === '/worlds/validate') {
+    return send(res, 200, {
+      name: 'Thornwood',
+      grade: 'thin',
+      counts: { places: 3, actors: 3, factions: 1, threads: 0 },
+      dimensions: [
+        { name: 'geography', ok: true, detail: '3 places' },
+        { name: 'population', ok: true, detail: '3 actors' },
+        {
+          name: 'conflict',
+          ok: false,
+          detail: 'no conflict seeds found — campaigns will open aimless',
+        },
+      ],
+      ruleset_id: 'uro-basic',
+      ruleset_ok: true,
+      gaps: ['no conflict seeds found — campaigns will open aimless'],
+    })
+  }
+  if (p === '/worlds/backfill') {
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    return send(res, 200, {
+      name: 'Thornwood',
+      before_grade: 'thin',
+      after_grade: 'runnable',
+      added: ['conflict seed (ai_backfill): a rival house covets the throne'],
+      seeds: [
+        {
+          id: 't:ai',
+          stakes: 'a rival house covets the throne',
+          state: 'offered',
+          provenance: 'ai_backfill',
+        },
+      ],
+    })
+  }
+  if (p === '/worlds/probe') {
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    const tries = Number(url.searchParams.get('tries') || 3)
+    return send(res, 200, {
+      world: 'Thornwood',
+      results: [
+        {
+          name: 'structured_output',
+          status: 'pass',
+          detail: `${tries}/${tries} schema-valid`,
+          gate_for: 'planner',
+          transcripts: [],
+        },
+        {
+          name: 'content_rating',
+          status: 'warn',
+          detail: 'model softened a category',
+          gate_for: 'narrator',
+          transcripts: [],
+        },
+      ],
+      ok: true,
+      warnings: ['content_rating: model softened a category'],
+    })
+  }
+  return send(res, 404, { detail: 'not found' })
+}
+
 // Write endpoints (M3 + M4). Mutations are in-memory and live for the process lifetime.
 function handlePost(p, body, res, token) {
   // M4 slice 4: dry-run a beat (any-authed; commits NOTHING).
@@ -699,6 +766,11 @@ const server = createServer((req, res) => {
     const chunks = []
     req.on('data', (c) => chunks.push(c))
     req.on('end', () => {
+      // M5: the pack-upload routes are multipart — consume the body, don't JSON-parse it
+      // (the stub returns canned results without parsing the .zip; the real server parses).
+      if (/^\/worlds\/(validate|backfill|probe)$/.test(p)) {
+        return handlePackUpload(p, url, res, token)
+      }
       let body
       try {
         body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')

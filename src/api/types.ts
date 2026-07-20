@@ -359,3 +359,57 @@ export interface ConsistencyResponse {
   total: number
   ratio: number
 }
+
+// ---- M5 slice 1: pack authoring — validate / backfill / probe (multipart .zip) --
+
+/** One sufficiency dimension (geography, population, conflict, …). */
+export interface SufficiencyDimension {
+  name: string
+  ok: boolean
+  detail: string
+}
+
+/** POST /worlds/validate — sufficiency grade + gaps (parse-only, any-authed, BE-6). */
+export interface ValidateResponse {
+  name: string
+  grade: string // "runnable" | "thin" | "insufficient"
+  counts: { places: number; actors: number; factions: number; threads: number }
+  dimensions: SufficiencyDimension[]
+  ruleset_id: string
+  ruleset_ok: boolean
+  gaps: string[]
+}
+
+/** An AI-generated conflict seed (provenance="ai_backfill"). */
+export interface ThreadSeedRow {
+  id: string
+  stakes: string
+  state: string
+  provenance: string
+}
+
+/** POST /worlds/backfill — AI gap-fill PREVIEW (operator-only, commits nothing, BE-7). */
+export interface BackfillResponse {
+  name: string
+  before_grade: string
+  after_grade: string
+  added: string[]
+  seeds: ThreadSeedRow[]
+}
+
+/** One capability probe result (warn-not-fail). */
+export interface ProbeResult {
+  name: string
+  status: string // "pass" | "warn" | "fail"
+  detail: string
+  gate_for: string
+  transcripts: string[]
+}
+
+/** POST /worlds/probe — model-capability report (operator-only, warn-not-fail, BE-7). */
+export interface ProbeResponse {
+  world: string
+  results: ProbeResult[]
+  ok: boolean
+  warnings: string[]
+}

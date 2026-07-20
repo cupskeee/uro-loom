@@ -68,9 +68,12 @@ export async function apiFetch<T>(
   opts: RequestOptions = {},
 ): Promise<T> {
   const { method = 'GET', body, signal, auth = true } = opts
+  // A FormData body (a multipart pack upload) is sent as-is: the browser sets the
+  // multipart Content-Type + boundary, so we must NOT set it or JSON-encode.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
 
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (auth && conn.token) headers['Authorization'] = `Bearer ${conn.token}`
 
   let res: Response
@@ -79,7 +82,7 @@ export async function apiFetch<T>(
       method,
       headers,
       signal,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
     })
   } catch (cause) {
     // fetch rejects only on network-level failure; HTTP errors resolve normally.
