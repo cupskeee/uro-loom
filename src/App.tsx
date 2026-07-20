@@ -5,6 +5,7 @@ import { Layout } from './components/Layout'
 import { WorldsPage } from './pages/WorldsPage'
 import { WorldDetailPage } from './pages/WorldDetailPage'
 import { TimelinePanel } from './pages/panels/TimelinePanel'
+import { EventsPanel } from './pages/panels/EventsPanel'
 import { CampaignsPage } from './pages/CampaignsPage'
 import { CampaignDetailPage } from './pages/CampaignDetailPage'
 import { OverviewPanel } from './pages/panels/OverviewPanel'
@@ -29,6 +30,7 @@ export function App() {
         <Route path="worlds" element={<WorldsPage />} />
         <Route path="worlds/:worldId" element={<WorldDetailPage />}>
           <Route index element={<TimelinePanel />} />
+          <Route path="events" element={<EventsPanel />} />
         </Route>
         <Route path="campaigns" element={<CampaignsPage />} />
         <Route path="campaigns/:campaignId" element={<CampaignDetailPage />}>

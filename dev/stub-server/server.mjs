@@ -282,6 +282,146 @@ const LOG = {
   ],
 }
 
+// Per-commit raw events (the OMNISCIENT log — operator-only, D-45). Keyed by commit_id;
+// the events-along-a-branch view flattens these over the branch's lineage.
+const COMMIT_EVENTS = {
+  cmt_a5: {
+    parent_id: 'cmt_a4',
+    depth: 5,
+    events: [
+      {
+        event_id: 'ev_a5_0',
+        seq: 0,
+        event_type: 'BeatResolved',
+        entity_refs: ['a:wizard'],
+        world_time: { day: 12, segment: 'evening' },
+        caused_by: { kind: 'player_action', participant_id: 'player-1' },
+        payload: {
+          intent_text: 'call down the meteor',
+          narration: 'The sky splits and fire falls on Vel.',
+        },
+      },
+      {
+        event_id: 'ev_a5_1',
+        seq: 1,
+        event_type: 'PlaceDestroyed',
+        entity_refs: ['p:vel'],
+        world_time: { day: 12, segment: 'evening' },
+        caused_by: { kind: 'narrator' },
+        payload: { place_id: 'p:vel' },
+      },
+    ],
+  },
+  cmt_a4: {
+    parent_id: 'cmt_a3',
+    depth: 4,
+    events: [
+      {
+        event_id: 'ev_a4_0',
+        seq: 0,
+        event_type: 'BeatResolved',
+        entity_refs: ['a:wizard'],
+        world_time: { day: 10, segment: 'night' },
+        caused_by: { kind: 'player_action' },
+        payload: { intent_text: 'climb the spire' },
+      },
+    ],
+  },
+  cmt_a3: {
+    parent_id: 'cmt_a2',
+    depth: 3,
+    events: [
+      {
+        event_id: 'ev_a3_0',
+        seq: 0,
+        event_type: 'BeatResolved',
+        entity_refs: ['a:elder'],
+        world_time: { day: 8, segment: 'morning' },
+        caused_by: { kind: 'player_action' },
+        payload: { intent_text: 'ask the elder about the omen' },
+      },
+      {
+        event_id: 'ev_a3_1',
+        seq: 1,
+        event_type: 'ClaimRecorded',
+        entity_refs: ['a:elder', 'p:vel'],
+        world_time: { day: 8, segment: 'morning' },
+        caused_by: { kind: 'narrator' },
+        payload: { statement: 'the meteor will fall on Vel', truth: 'true', origin: 'narrator' },
+      },
+    ],
+  },
+  cmt_a2: {
+    parent_id: 'cmt_a1',
+    depth: 2,
+    events: [
+      {
+        event_id: 'ev_a2_0',
+        seq: 0,
+        event_type: 'BeatResolved',
+        entity_refs: [],
+        world_time: { day: 5, segment: 'afternoon' },
+        caused_by: { kind: 'player_action' },
+        payload: { intent_text: 'take the road to Vel' },
+      },
+    ],
+  },
+  cmt_a1: {
+    parent_id: 'cmt_a0',
+    depth: 1,
+    events: [
+      {
+        event_id: 'ev_a1_0',
+        seq: 0,
+        event_type: 'CampaignStarted',
+        entity_refs: ['cmp_ashfall'],
+        world_time: { day: 0 },
+        caused_by: { kind: 'system' },
+        payload: {},
+      },
+      {
+        event_id: 'ev_a1_1',
+        seq: 1,
+        event_type: 'PCBound',
+        entity_refs: ['a:wizard'],
+        world_time: { day: 0 },
+        caused_by: { kind: 'system' },
+        payload: { participant_id: 'player-1' },
+      },
+    ],
+  },
+  cmt_a0: {
+    parent_id: null,
+    depth: 0,
+    events: [
+      {
+        event_id: 'ev_a0_0',
+        seq: 0,
+        event_type: 'WorldGenesis',
+        entity_refs: [],
+        world_time: { day: 0 },
+        caused_by: { kind: 'system' },
+        payload: { world_name: 'Ashfall', tone: ['grim'] },
+      },
+    ],
+  },
+  cmt_t1: {
+    parent_id: null,
+    depth: 1,
+    events: [
+      {
+        event_id: 'ev_t1_0',
+        seq: 0,
+        event_type: 'WorldGenesis',
+        entity_refs: [],
+        world_time: { day: 0 },
+        caused_by: { kind: 'system' },
+        payload: { world_name: 'Thornwood' },
+      },
+    ],
+  },
+}
+
 // Dev convention: a "player*"/"pleb*" token is a plain player (→ 403 on operator
 // writes, so the 403 UX is demoable); any other token is treated as an operator so
 // the happy path works out of the box. The real server gates on `is_admin` (D-44).
@@ -525,6 +665,49 @@ const server = createServer((req, res) => {
     let commits = LOG[b.branch_id] ?? []
     if (lim != null) commits = commits.slice(0, Number(lim))
     return send(res, 200, { branch: branchName, commits })
+  }
+
+  // M4 slice 2: GET /worlds/{w}/events (raw log, filterable) — OPERATOR-only (D-45).
+  const mev = p.match(/^\/worlds\/([^/]+)\/events$/)
+  if (req.method === 'GET' && mev) {
+    const wid = decodeURIComponent(mev[1])
+    if (!WORLDS.find((w) => w.world_id === wid)) return send(res, 404, { detail: 'no such world' })
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    const branchName = url.searchParams.get('branch') || 'main'
+    const b = (BRANCHES[wid] ?? []).find((x) => x.name === branchName)
+    if (!b) return send(res, 404, { detail: `no such branch: ${branchName}` })
+    const lim = url.searchParams.get('limit')
+    if (lim != null && !/^-?\d+$/.test(lim))
+      return send(res, 400, { detail: 'limit must be an integer' })
+    if (lim != null && Number(lim) < 0)
+      return send(res, 400, { detail: 'limit must not be negative' })
+    let events = (LOG[b.branch_id] ?? []).flatMap((c) => COMMIT_EVENTS[c.commit_id]?.events ?? [])
+    const type = url.searchParams.get('type')
+    if (type) events = events.filter((e) => e.event_type === type)
+    const entity = url.searchParams.get('entity_ref')
+    if (entity) events = events.filter((e) => e.entity_refs.includes(entity))
+    const cause = url.searchParams.get('caused_by')
+    if (cause) events = events.filter((e) => e.caused_by.kind === cause)
+    events = events.slice(0, lim != null ? Number(lim) : 50)
+    return send(res, 200, { branch: branchName, events })
+  }
+
+  // M4 slice 2: GET /worlds/{w}/commits/{id} — one commit's events. OPERATOR-only (D-45).
+  const mcd = p.match(/^\/worlds\/([^/]+)\/commits\/([^/]+)$/)
+  if (req.method === 'GET' && mcd) {
+    const wid = decodeURIComponent(mcd[1])
+    if (!WORLDS.find((w) => w.world_id === wid)) return send(res, 404, { detail: 'no such world' })
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    const cid = decodeURIComponent(mcd[2])
+    const ce = COMMIT_EVENTS[cid]
+    if (!ce) return send(res, 404, { detail: 'no such commit' })
+    return send(res, 200, {
+      commit_id: cid,
+      parent_id: ce.parent_id,
+      depth: ce.depth,
+      commit_hash: `h_${cid}`,
+      events: ce.events,
+    })
   }
 
   if (req.method === 'GET' && p === '/campaigns') {

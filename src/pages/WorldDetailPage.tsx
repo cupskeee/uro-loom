@@ -38,6 +38,9 @@ export function WorldDetailPage() {
         <NavLink to="." end className={tab}>
           Timeline
         </NavLink>
+        <NavLink to="events" className={tab}>
+          Events
+        </NavLink>
       </nav>
 
       <Outlet />

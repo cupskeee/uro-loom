@@ -87,7 +87,11 @@ Goal: the signature branching + "who knows what" views. Paired with backend item
   **Timeline** tab — **Branch list** (heads, depth, in-fiction day, fork origin) · **Commit Log**
   (git-log lineage, markers) · **Fork** (from a commit/marker, optional time-skip) · **Add Marker**.
   Fork + marker are **operator-only** (a 403 renders "operator token required", D-44). BE-1/2/3.
-- **Event-Log Inspector** + **Commit/Beat Detail** (BE-4, **operator-only** — the omniscient log).
+- ✅ **Slice 2 — event-log inspector (shipped):** a world **Events** tab — a filterable raw event
+  stream (branch/type/entity_ref/caused_by) + **Commit Detail** (deep-linked from the Timeline's
+  "inspect →"). **Operator-only (D-45):** a player token gets an informational "operator required"
+  panel, not the omniscient log. `QueryBoundary` now degrades a 403 gracefully; the query client no
+  longer retries deterministic 4xx/501. BE-4.
 - **Epistemic Explorer** (claims + belief fan-out) · **Faction/Relationship graph** ·
   **Counters dashboard** · **Memory/Recall inspector** (claims/beliefs/sheets/edges/counters are
   operator-only, D-46; the state read enforces the player allowlist).

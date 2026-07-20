@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useBranches, useLog } from '../../api/queries'
 import { useCreateMarker, useForkBranch } from '../../api/mutations'
 import { errorMessage, isForbidden } from '../../api/errors'
@@ -165,6 +165,13 @@ function LogRow({ entry }: { entry: LogEntry }) {
               ⚑ {mk}
             </Badge>
           ))}
+          <Link
+            to={`events?commit=${encodeURIComponent(entry.commit_id)}`}
+            className="ml-auto text-xs text-indigo-300 hover:text-indigo-200"
+            data-testid="inspect-commit"
+          >
+            inspect →
+          </Link>
         </div>
         <div className="mt-1 text-sm text-neutral-300">{entry.summary || '(no summary)'}</div>
         <div className="mt-1 flex flex-wrap gap-1">

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { isUnsupported } from '../api/errors'
+import { isForbidden, isUnsupported } from '../api/errors'
 
 interface QueryBoundaryProps<T> {
   query: UseQueryResult<T>
@@ -37,6 +37,24 @@ export function QueryBoundary<T>({
           <p className="mt-1">
             The connected uro-server doesn’t expose this endpoint yet. See the backend co-evolution
             items (BE-1…BE-11) in the plan.
+          </p>
+        </div>
+      )
+    }
+    if (isForbidden(query.error)) {
+      // A 403: an operator-only observability surface (D-45 raw log / D-46 omniscient
+      // sections) read with a plain player token, or a campaign-scoped token out of scope
+      // (D-39). Informational, not a red failure — reconnect with the right credential.
+      return (
+        <div
+          data-testid="operator-required"
+          className="m-6 rounded-lg border border-amber-900/50 bg-amber-950/20 p-6 text-sm text-amber-200/90"
+        >
+          <div className="font-medium text-amber-200">Operator token required</div>
+          <p className="mt-1">
+            This is an operator-only observability surface (the omniscient event log / epistemic
+            state, D-45/D-46). Reconnect with an <code>--admin-token</code> credential, or one
+            scoped to this resource.
           </p>
         </div>
       )
