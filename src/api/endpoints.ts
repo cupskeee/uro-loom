@@ -9,6 +9,9 @@ import type {
   Campaign,
   CampaignState,
   ChronicleResponse,
+  CodexAddRequest,
+  CodexAddResponse,
+  CodexResponse,
   CommitDetail,
   ConsistencyResponse,
   CreateCampaignRequest,
@@ -18,6 +21,7 @@ import type {
   CreateWorldResponse,
   DryRunRequest,
   DryRunResponse,
+  EndCampaignRequest,
   EpistemicState,
   EventFilters,
   EventsResponse,
@@ -367,4 +371,38 @@ export function exportWorld(
  */
 export function importWorld(conn: Connection, bundle: WorldBundle): Promise<ImportWorldResponse> {
   return apiFetch<ImportWorldResponse>(conn, '/worlds/import', { method: 'POST', body: bundle })
+}
+
+// ---- M5 slice 3: campaign end + codex (BE-9) ------------------------------------
+
+/** POST /campaigns/{id}/end — end a campaign (OPERATOR-only, D-44). Returns the closing marker. */
+export function endCampaign(
+  conn: Connection,
+  campaignId: string,
+  body: EndCampaignRequest,
+): Promise<Marker> {
+  return apiFetch<Marker>(conn, `/campaigns/${enc(campaignId)}/end`, { method: 'POST', body })
+}
+
+/** GET /campaigns/{id}/codex[?participant=] → a participant's notes (self-or-admin, D-39). */
+export function getCodex(
+  conn: Connection,
+  campaignId: string,
+  participant?: string,
+  signal?: AbortSignal,
+): Promise<CodexResponse> {
+  const q = participant ? `?participant=${enc(participant)}` : ''
+  return apiFetch<CodexResponse>(conn, `/campaigns/${enc(campaignId)}/codex${q}`, { signal })
+}
+
+/** POST /campaigns/{id}/codex — add a fork-surviving note (self-or-admin). */
+export function addCodexNote(
+  conn: Connection,
+  campaignId: string,
+  body: CodexAddRequest,
+): Promise<CodexAddResponse> {
+  return apiFetch<CodexAddResponse>(conn, `/campaigns/${enc(campaignId)}/codex`, {
+    method: 'POST',
+    body,
+  })
 }

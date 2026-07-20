@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type Connection } from './client'
 import {
+  addCodexNote,
   backfillPack,
   createCampaign,
   createMarker,
   createWorld,
   dryRun,
+  endCampaign,
   forkBranch,
   importWorld,
   probePack,
@@ -147,5 +149,29 @@ describe('M5 slice 2: import', () => {
     })
     const headers = calls[0].init.headers as unknown as Record<string, string>
     expect(headers['Content-Type']).toBe('application/json')
+  })
+})
+
+describe('M5 slice 3: end + codex writes', () => {
+  it('endCampaign POSTs { marker, outcome } to /campaigns/{c}/end', async () => {
+    const calls = capture()
+    await endCampaign(conn, 'cmp_1', { marker: 'the-end', outcome: 'ash' })
+    expect(calls[0].url).toBe('http://s.test/campaigns/cmp_1/end')
+    expect(calls[0].init.method).toBe('POST')
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({ marker: 'the-end', outcome: 'ash' })
+  })
+  it('addCodexNote POSTs the note to /campaigns/{c}/codex', async () => {
+    const calls = capture()
+    await addCodexNote(conn, 'cmp_1', {
+      text: 'remember the code',
+      pinned: true,
+      refs: ['name:vault'],
+    })
+    expect(calls[0].url).toBe('http://s.test/campaigns/cmp_1/codex')
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({
+      text: 'remember the code',
+      pinned: true,
+      refs: ['name:vault'],
+    })
   })
 })

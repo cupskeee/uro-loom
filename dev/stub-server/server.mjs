@@ -324,6 +324,10 @@ const LOG = {
   ],
 }
 
+// M5 slice 3: participant codex notes, keyed by `${campaignId}:${participant}` (fork-surviving,
+// self-or-admin). The stub treats the token as the participant identity.
+const CODEX = {}
+
 // Per-commit raw events (the OMNISCIENT log — operator-only, D-45). Keyed by commit_id;
 // the events-along-a-branch view flattens these over the branch's lineage.
 const COMMIT_EVENTS = {
@@ -595,6 +599,43 @@ function handlePost(p, body, res, token) {
     }
     WORLDS.push(world)
     return send(res, 200, world)
+  }
+
+  // M5 slice 3: end a campaign (OPERATOR-only, D-44) → the closing marker.
+  const mend = p.match(/^\/campaigns\/([^/]+)\/end$/)
+  if (mend) {
+    const id = decodeURIComponent(mend[1])
+    const campaign = CAMPAIGNS.find((c) => c.campaign_id === id)
+    if (!campaign) return send(res, 404, { detail: 'no such campaign' })
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    if (!body.marker) return send(res, 400, { detail: "missing required field 'marker'" })
+    return send(res, 200, {
+      marker_id: nextId('mk'),
+      world_id: campaign.world_id,
+      name: String(body.marker),
+      commit_id: BRANCHES[campaign.world_id]?.[0]?.head_commit ?? 'cmt_end',
+    })
+  }
+
+  // M5 slice 3: add a codex note (self-or-admin, D-39; fork-surviving, never canon).
+  const mcxp = p.match(/^\/campaigns\/([^/]+)\/codex$/)
+  if (mcxp) {
+    const id = decodeURIComponent(mcxp[1])
+    if (!CAMPAIGNS.find((c) => c.campaign_id === id))
+      return send(res, 404, { detail: 'no such campaign' })
+    const target = body.participant || token
+    if (target !== token && !isOperator(token))
+      return send(res, 403, { detail: 'can only write your own codex (or as operator)' })
+    if (!body.text) return send(res, 400, { detail: "missing required field 'text'" })
+    const key = body.key || nextId('note')
+    const list = CODEX[`${id}:${target}`] ?? (CODEX[`${id}:${target}`] = [])
+    list.push({
+      key,
+      text: String(body.text),
+      pinned: !!body.pinned,
+      entity_refs: body.refs || [],
+    })
+    return send(res, 200, { participant: target, key })
   }
 
   // M4 slice 4: dry-run a beat (any-authed; commits NOTHING).
@@ -928,6 +969,18 @@ const server = createServer((req, res) => {
     // bare /campaigns/{id}
     if (!campaign) return send(res, 404, { detail: 'no such campaign' })
     return send(res, 200, campaign)
+  }
+
+  // M5 slice 3: GET /campaigns/{c}/codex[?participant=] — participant notes (self-or-admin, D-39).
+  const mcx = p.match(/^\/campaigns\/([^/]+)\/codex$/)
+  if (req.method === 'GET' && mcx) {
+    const id = decodeURIComponent(mcx[1])
+    if (!CAMPAIGNS.find((c) => c.campaign_id === id))
+      return send(res, 404, { detail: 'no such campaign' })
+    const target = url.searchParams.get('participant') || token // the stub token IS the participant
+    if (target !== token && !isOperator(token))
+      return send(res, 403, { detail: 'can only read your own codex (or as operator)' })
+    return send(res, 200, { participant: target, notes: CODEX[`${id}:${target}`] ?? [] })
   }
 
   // M4 slice 4: GET /campaigns/{c}/consistency — the T2 proxy (any-authed).

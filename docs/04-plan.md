@@ -122,10 +122,16 @@ Goal: the pack pipeline in the browser. Backend items **BE-6…BE-9**.
   downloadable hash-chained `.uwp` (operator, D-45) and **Import** a bundle → a fresh world, with the
   **tamper → clear error** surfaced (a malformed/altered bundle is rejected before any write). The
   API client gained a FormData path (slice 1) reused here for the bundle round-trip. BE-8.
-- **Campaign End** (marker + PC release).
-- **Codex** add/list (participant memory).
+- ✅ **Slice 3 — campaign end + codex (shipped):** an **End campaign** form on the Manage tab
+  (marker + optional outcome, operator D-44) and a campaign **Codex** tab — list + add fork-surviving
+  out-of-world notes (pinned / entity-refs), **self-or-admin** scoped (D-39; a player reads/writes
+  their own, an operator may view another's). BE-9.
 
-**Exit:** author a thin pack → validate → backfill → seed → play, without a terminal.
+**M5 COMPLETE.** Validate · backfill · probe · export · import · campaign end · codex all ship.
+
+**Exit (met):** upload a pack → validate/backfill/probe; export a world to a `.uwp` + import one
+(tamper rejected); end a campaign + keep fork-surviving codex notes — all in the browser. _Seed +
+pack-upload-create stay the deferred engine carve-outs._
 
 ## M6 — Identity & ops (Loom-owned) — optional / multi-tenant
 

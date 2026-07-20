@@ -8,6 +8,7 @@ import {
   getCampaign,
   getCampaignState,
   getChronicle,
+  getCodex,
   getCommit,
   getConsistency,
   getEpistemicState,
@@ -142,5 +143,16 @@ export function useConsistency(campaignId: string) {
     queryKey: ['consistency', connection?.baseUrl, campaignId],
     enabled: !!connection && !!campaignId,
     queryFn: ({ signal }) => getConsistency(connection!, campaignId, signal),
+  })
+}
+
+// ---- M5 slice 3: codex (participant memory, self-or-admin) ----------------------
+
+export function useCodex(campaignId: string, participant?: string) {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['codex', connection?.baseUrl, campaignId, participant ?? null],
+    enabled: !!connection && !!campaignId,
+    queryFn: ({ signal }) => getCodex(connection!, campaignId, participant, signal),
   })
 }

@@ -361,3 +361,46 @@ test('export/import (M5): a player cannot export (operator-only, D-45)', async (
   await page.getByTestId('export-run').click()
   await expect(page.getByTestId('export-feedback')).toContainText('Operator token required')
 })
+
+test('codex (M5): add a fork-surviving note and see it in the list', async ({ page }) => {
+  await connect(page)
+  await page.goto('/campaigns/cmp_ashfall/codex')
+  await expect(page.getByTestId('codex-panel')).toBeVisible()
+
+  await page.getByTestId('note-text').fill('the vault code is 7-3-9')
+  await page.getByTestId('note-pinned').check()
+  await page.getByTestId('note-refs').fill('name:vault')
+  await page.getByTestId('note-submit').click()
+
+  await expect(page.getByTestId('note-feedback')).toContainText('saved')
+  const note = page.getByTestId('note-row').filter({ hasText: 'the vault code is 7-3-9' })
+  await expect(note).toBeVisible()
+  await expect(note).toContainText('pinned')
+  await expect(note).toContainText('name:vault')
+})
+
+test('end campaign (M5): operator ends a campaign from Manage', async ({ page }) => {
+  await connect(page) // dev-token → operator
+  await page.goto('/campaigns/cmp_ashfall/manage')
+  await expect(page.getByTestId('manage-panel')).toBeVisible()
+
+  await page.getByTestId('end-marker').fill('the-heir-fell')
+  await page.getByTestId('end-outcome').fill('the dynasty ended in ash')
+  await page.getByTestId('end-submit').click()
+  await expect(page.getByTestId('end-feedback')).toContainText('ended')
+})
+
+test('end campaign (M5): a player token is refused (operator-only, D-44)', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('server-url').fill(STUB_URL)
+  await page.getByTestId('token').fill('player-1')
+  await page.getByTestId('connect').click()
+  await expect(page.getByTestId('health-badge')).toHaveAttribute('data-status', 'ok', {
+    timeout: 10_000,
+  })
+
+  await page.goto('/campaigns/cmp_ashfall/manage')
+  await page.getByTestId('end-marker').fill('nope')
+  await page.getByTestId('end-submit').click()
+  await expect(page.getByTestId('end-feedback')).toContainText('Operator token required')
+})

@@ -1,6 +1,7 @@
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
+  useEndCampaign,
   useJoinCampaign,
   useMintToken,
   useReportOutcome,
@@ -8,9 +9,62 @@ import {
   useTimeSkip,
 } from '../../api/mutations'
 import { buildOutcomeBundle } from '../../api/outcome'
-import { errorMessage } from '../../api/errors'
+import { errorMessage, isForbidden } from '../../api/errors'
 import { Card, IdChip } from '../../components/ui'
 import { Feedback, Submit, TextField } from '../../components/forms'
+
+/** A 403 on an operator-only lifecycle write → the admin-token hint (D-44). */
+function opError(err: unknown): string {
+  if (isForbidden(err)) return 'Operator token required — reconnect with an --admin-token (D-44).'
+  return errorMessage(err)
+}
+
+function EndCampaignForm({ campaignId }: { campaignId: string }) {
+  const m = useEndCampaign(campaignId)
+  const [marker, setMarker] = useState('')
+  const [outcome, setOutcome] = useState('')
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    m.reset()
+    m.mutate({ marker: marker.trim(), outcome: outcome.trim() || undefined })
+  }
+  return (
+    <Section
+      title="End campaign"
+      subtitle="Release the PCs and mark the closing commit as a fork root (operator, D-44)."
+    >
+      <form onSubmit={submit} className="space-y-3" data-testid="end-form">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <TextField
+            label="Closing marker name"
+            value={marker}
+            onChange={setMarker}
+            required
+            testid="end-marker"
+            placeholder="the-heir-fell"
+          />
+          <TextField
+            label="Outcome (optional)"
+            value={outcome}
+            onChange={setOutcome}
+            testid="end-outcome"
+            placeholder="the dynasty ended in ash"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <Submit pending={m.isPending} testid="end-submit">
+            End campaign
+          </Submit>
+          <Feedback
+            testid="end-feedback"
+            error={m.isError ? opError(m.error) : null}
+            success={m.isSuccess ? <span>ended · marked at {m.data.commit_id}</span> : null}
+          />
+        </div>
+      </form>
+    </Section>
+  )
+}
 
 function Section({
   title,
@@ -322,6 +376,7 @@ export function ManagePanel() {
         <RevokeForm campaignId={campaignId} />
       </div>
       <TimeSkipForm campaignId={campaignId} />
+      <EndCampaignForm campaignId={campaignId} />
       <OutcomeForm campaignId={campaignId} />
     </div>
   )
