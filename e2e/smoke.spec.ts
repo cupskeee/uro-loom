@@ -404,3 +404,46 @@ test('end campaign (M5): a player token is refused (operator-only, D-44)', async
   await page.getByTestId('end-submit').click()
   await expect(page.getByTestId('end-feedback')).toContainText('Operator token required')
 })
+
+test('ops (M6): operator sees the ruleset registry + usage telemetry', async ({ page }) => {
+  await connect(page) // dev-token → operator
+  await page.getByRole('link', { name: 'Ops' }).click()
+  await expect(page.getByTestId('ops-page')).toBeVisible()
+
+  // Ruleset registry (any-authed) — both built-ins with their sheet shape.
+  await expect(page.getByTestId('ruleset-card').filter({ hasText: 'uro-basic' })).toContainText(
+    'hp',
+  )
+  await expect(page.getByTestId('ruleset-card').filter({ hasText: 'uro-pbta' })).toContainText(
+    'harm',
+  )
+
+  // Usage telemetry (operator) — the total + a per-stage table.
+  await expect(page.getByTestId('usage-result')).toContainText('total calls')
+  await expect(page.getByTestId('usage-row').filter({ hasText: 'narrator' })).toBeVisible()
+
+  // Filter to one stage.
+  await page.getByTestId('usage-stage').fill('planner')
+  await page.getByTestId('usage-filter').click()
+  await expect(page.getByTestId('usage-row')).toHaveCount(1)
+  await expect(page.getByTestId('usage-row')).toContainText('planner')
+})
+
+test('ops (M6): a player sees rulesets but usage needs an operator token (D-44)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByTestId('server-url').fill(STUB_URL)
+  await page.getByTestId('token').fill('player-1')
+  await page.getByTestId('connect').click()
+  await expect(page.getByTestId('health-badge')).toHaveAttribute('data-status', 'ok', {
+    timeout: 10_000,
+  })
+
+  await page.goto('/ops')
+  // Rulesets are public.
+  await expect(page.getByTestId('ruleset-card').first()).toBeVisible()
+  // Usage is operator-only → the operator-required panel, no table.
+  await expect(page.getByTestId('operator-required')).toBeVisible()
+  await expect(page.getByTestId('usage-result')).toHaveCount(0)
+})

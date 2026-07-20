@@ -473,3 +473,34 @@ export interface CodexAddResponse {
   participant: string
   key: string
 }
+
+// ---- M6 slice 1: ops — ruleset registry + usage telemetry (BE-10) ---------------
+
+/** One registered ruleset (GET /rulesets). `sheet_schema` is a JSON Schema. */
+export interface RulesetInfo {
+  id: string
+  version: string
+  sheet_schema: Record<string, unknown>
+}
+
+/** GET /rulesets → the bound registry (any-authed — public capability info). */
+export interface RulesetsResponse {
+  rulesets: RulesetInfo[]
+}
+
+/** One row of llm_calls telemetry, grouped by (stage, model). */
+export interface UsageRow {
+  stage_tag: string
+  model: string | null
+  calls: number
+  tokens_in: number
+  tokens_out: number
+  avg_latency_ms: number
+}
+
+/** GET /usage[?stage=] → LLM-call telemetry by stage (OPERATOR-only, D-44). */
+export interface UsageResponse {
+  stage: string | null
+  total_calls: number
+  by_stage: UsageRow[]
+}

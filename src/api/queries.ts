@@ -15,6 +15,8 @@ import {
   getEvents,
   getLog,
   getRoster,
+  getRulesets,
+  getUsage,
   listBranches,
   listCampaigns,
   listWorlds,
@@ -154,5 +156,25 @@ export function useCodex(campaignId: string, participant?: string) {
     queryKey: ['codex', connection?.baseUrl, campaignId, participant ?? null],
     enabled: !!connection && !!campaignId,
     queryFn: ({ signal }) => getCodex(connection!, campaignId, participant, signal),
+  })
+}
+
+// ---- M6 slice 1: ops (ruleset registry + usage telemetry) ----------------------
+
+export function useRulesets() {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['rulesets', connection?.baseUrl],
+    enabled: !!connection,
+    queryFn: ({ signal }) => getRulesets(connection!, signal),
+  })
+}
+
+export function useUsage(stage?: string) {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['usage', connection?.baseUrl, stage ?? null],
+    enabled: !!connection,
+    queryFn: ({ signal }) => getUsage(connection!, stage, signal),
   })
 }
