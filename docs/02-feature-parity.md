@@ -7,27 +7,33 @@ must be **built**. That gap is the reason full parity is a two-repo effort.
 
 ## Backend reality check
 
-`uro-server` today exposes a real but partial management surface. **Built endpoints:**
+`uro-server` now exposes **almost the whole management surface** — the BE-1…BE-11 epic + the D-46
+holistic-review hardening are merged in `uro`. **Built endpoints** (grouped; `AUTH` = operator-only
+under D-44/D-45/D-46, else any-authed or self-or-admin):
 
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/healthz` | liveness (open) |
-| GET | `/worlds` · POST | list worlds · create world (JSON body only) |
+| GET/POST | `/worlds` | list · **create** world (JSON body; POST is `AUTH`) |
+| POST | `/worlds/validate` · `/worlds/backfill` · `/worlds/probe` | pack upload → grade · AI gap-fill preview · capability probe (backfill/probe `AUTH`) |
+| POST | `/worlds/import` · GET `/worlds/{w}/export` | bundle in/out, hash-chain verified (`AUTH`) |
+| GET | `/worlds/{w}/branches` · `/log` · `/chronicle` | branch tree · lineage · world-scoped beats (chronicle `AUTH`) |
+| POST | `/worlds/{w}/branches` · `/markers` | fork · marker create (`AUTH`) |
+| GET | `/worlds/{w}/events` · `/commits/{id}` | raw event log + commit detail (`AUTH`, D-45 omniscient) |
 | POST | `/worlds/{w}/campaigns` | create a campaign |
-| GET | `/campaigns` · `/campaigns/{c}` | list · detail |
-| POST | `/campaigns/{c}/join` | seat a participant on a PC |
-| GET | `/campaigns/{c}/roster` | connected/seated participants |
-| GET | `/campaigns/{c}/state` | materialized state (current branch, no `?at=`) |
-| GET | `/campaigns/{c}/chronicle` | campaign-scoped Lore Wall |
-| POST | `/campaigns/{c}/time-skip` | advance in-fiction time + agenda tick |
+| GET | `/campaigns` · `/campaigns/{c}` · `/roster` · `/state` · `/chronicle` · `/consistency` | reads (state: player section allowlist, D-46) |
+| POST | `/campaigns/{c}/dry-run` | preview a beat, commit nothing (intent-only, D-37) |
+| POST | `/campaigns/{c}/end` · `/time-skip` | end campaign · advance time + agendas (`AUTH`) |
+| GET/POST | `/campaigns/{c}/codex` | participant memory (self-or-admin) |
 | POST | `/campaigns/{c}/tokens` · `/tokens/revoke` | mint · revoke a durable token |
 | POST | `/campaigns/{c}/encounters/{e}/outcome` | Chronicler: ingest an external `OutcomeBundle` |
+| GET | `/usage` · `/rulesets` | LLM metering (`AUTH`) · ruleset registry |
 | WS | `/campaigns/{c}/play?token=` | GM-mode play channel |
 
-**NOT built** (from `docs/08`'s deferred list + CLI-only commands): world validate/seed/backfill/
-probe/export/import over HTTP, branch list/fork/mark, commit log, dry-run/preview, consistency,
-campaign end, codex add/list, world-scoped `state?at=` / chronicle, `GET /usage`, and multipart
-**pack-file upload** (`POST /worlds` is JSON-body only today).
+**Still NOT built (the only gaps):** world **`seed`** and multipart **pack-upload create** (with
+which backfill-COMMIT ships) — both need the pack manifest re-supplied; and world **`state?at=`**
+(materialize-at-commit) — a deferred core primitive. Everything else the CLI does now has an HTTP
+endpoint.
 
 ## The 26-command matrix
 
