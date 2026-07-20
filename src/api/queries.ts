@@ -9,6 +9,7 @@ import {
   getCampaignState,
   getChronicle,
   getCommit,
+  getConsistency,
   getEpistemicState,
   getEvents,
   getLog,
@@ -130,5 +131,16 @@ export function useEpistemicState(campaignId: string) {
     queryKey: ['epistemic', connection?.baseUrl, campaignId],
     enabled: !!connection && !!campaignId,
     queryFn: ({ signal }) => getEpistemicState(connection!, campaignId, signal),
+  })
+}
+
+// ---- M4 slice 4: consistency (BE-5) ---------------------------------------------
+
+export function useConsistency(campaignId: string) {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['consistency', connection?.baseUrl, campaignId],
+    enabled: !!connection && !!campaignId,
+    queryFn: ({ signal }) => getConsistency(connection!, campaignId, signal),
   })
 }

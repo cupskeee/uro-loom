@@ -280,7 +280,7 @@ export interface CreateMarkerRequest {
  */
 export interface EventEnvelope {
   event_id: string
-  seq: number
+  seq?: number // absent on dry-run (uncommitted) events
   event_type: string
   entity_refs: string[]
   world_time: { day?: number; segment?: string; [k: string]: unknown }
@@ -339,4 +339,23 @@ export interface BeliefRow {
 export interface EpistemicState {
   branch_id: string
   state: { claims?: ClaimRow[]; beliefs?: BeliefRow[] }
+}
+
+// ---- M4 slice 4: dry-run (beat preview) + consistency (BE-5) --------------------
+
+/** POST /campaigns/{c}/dry-run — preview a beat, INTENT-ONLY (no client plan=, D-37). */
+export interface DryRunRequest {
+  intent: string
+}
+
+/** The would-be events a beat would commit (commits NOTHING). Reuses the event shape. */
+export interface DryRunResponse {
+  events: EventEnvelope[]
+}
+
+/** GET /campaigns/{c}/consistency — the narrator contradiction-survival proxy (T2). */
+export interface ConsistencyResponse {
+  consistent: number
+  total: number
+  ratio: number
 }

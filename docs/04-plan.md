@@ -98,10 +98,16 @@ Goal: the signature branching + "who knows what" views. Paired with backend item
   `state?sections=claims,beliefs`; a player token gets the operator-required panel, and the
   scene-safe default state read is unaffected. (Faction/relationship graph · counters · memory
   inspector remain — same operator-only sections pattern.) BE-4/D-46.
-- **Preview Beat (dry-run)** · **Consistency** panel (BE-5) — the last M4 slice.
+- ✅ **Slice 4 — dry-run + consistency (shipped):** a campaign **Preview** tab — the T2
+  **consistency** proxy (ratio + survived/total) and a **dry-run** form (intent → the would-be
+  events, committing nothing; intent-only, D-37; any-authed). BE-5.
 
-**Exit:** fork a timeline in the UI, watch the DAG branch, and inspect the epistemic delta
-between two forks.
+**M4 COMPLETE.** All four slices shipped: timeline · event inspector · epistemic explorer ·
+dry-run/consistency.
+
+**Exit (met):** fork a timeline in the UI, walk the branch tree + commit log, inspect the raw
+event log + a commit, read the epistemic layer (claims/beliefs, operator-only), and dry-run a beat
+— all against a real `uro serve` (proven by Playwright flows against the stub).
 
 ## M5 — World authoring & lifecycle (backend ✅ shipped, BE-6/7/8) 🟢
 

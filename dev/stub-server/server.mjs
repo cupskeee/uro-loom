@@ -510,6 +510,35 @@ function slug(s) {
 
 // Write endpoints (M3 + M4). Mutations are in-memory and live for the process lifetime.
 function handlePost(p, body, res, token) {
+  // M4 slice 4: dry-run a beat (any-authed; commits NOTHING).
+  const mdr = p.match(/^\/campaigns\/([^/]+)\/dry-run$/)
+  if (mdr) {
+    const id = decodeURIComponent(mdr[1])
+    if (!CAMPAIGNS.find((c) => c.campaign_id === id))
+      return send(res, 404, { detail: 'no such campaign' })
+    const intent = String(body.intent || '').trim()
+    if (!intent) return send(res, 400, { detail: 'intent must be non-empty' })
+    const events = [
+      {
+        event_id: 'ev_dry_0',
+        event_type: 'BeatResolved',
+        entity_refs: ['actor_wren'],
+        world_time: { day: 12, segment: 'evening' },
+        caused_by: { kind: 'player_action' },
+        payload: { intent_text: intent, narration: 'The room holds its breath as you act.' },
+      },
+      {
+        event_id: 'ev_dry_1',
+        event_type: 'ClaimRecorded',
+        entity_refs: ['actor_wren'],
+        world_time: { day: 12, segment: 'evening' },
+        caused_by: { kind: 'narrator' },
+        payload: { statement: 'a bold move was made', truth: 'true', origin: 'narrator' },
+      },
+    ]
+    return send(res, 200, { events })
+  }
+
   // M4: fork a branch (operator-only, D-44).
   const mf = p.match(/^\/worlds\/([^/]+)\/branches$/)
   if (mf) {
@@ -788,6 +817,17 @@ const server = createServer((req, res) => {
     // bare /campaigns/{id}
     if (!campaign) return send(res, 404, { detail: 'no such campaign' })
     return send(res, 200, campaign)
+  }
+
+  // M4 slice 4: GET /campaigns/{c}/consistency — the T2 proxy (any-authed).
+  const mcon = p.match(/^\/campaigns\/([^/]+)\/consistency$/)
+  if (req.method === 'GET' && mcon) {
+    const id = decodeURIComponent(mcon[1])
+    if (!CAMPAIGNS.find((c) => c.campaign_id === id))
+      return send(res, 404, { detail: 'no such campaign' })
+    const consistent = 11
+    const total = 12
+    return send(res, 200, { consistent, total, ratio: consistent / total })
   }
 
   // A deliberately-unwired endpoint, so Loom's 501 handling has something to hit.
