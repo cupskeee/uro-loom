@@ -139,7 +139,10 @@ Goal: what the engine deliberately refuses to own.
 
 - **Own identity layer** (accounts/login/orgs) behind a **BFF** that holds Uro tokens and proxies
   calls; the browser never sees an admin token. Finer per-actor authorization enforced at the BFF
-  (Uro authority is coarse).
+  (Uro authority is coarse). **Design note (decision-ready): [`05-bff-design.md`](05-bff-design.md)** —
+  a session-cookie BFF injecting per-account, per-campaign engine-minted (D-39) player tokens
+  server-side; the incremental build plan there keeps today's zero-BFF operator mode working
+  throughout, and the crux (no cross-user impersonation) only closes at its Step 3.
 - ✅ **Usage & telemetry** dashboard (shipped) — an **Ops** page: `GET /usage` by stage (operator, D-44; `?world=`/`?campaign=`→400) + the ruleset registry viewer (`GET /rulesets`, any-authed, id@version + sheet shape). Billing/quota UX + the reaction-layer/rule-pack viewer (no endpoint yet) remain.
 - Any **content guardrails/moderation** Loom needs, at Loom's layer.
 - ✅ **Ruleset viewer** (shipped, on the Ops page). **Reaction-layer/rule-pack viewer** — no dedicated endpoint yet (the pack rides `WorldGenesis`); deferred.

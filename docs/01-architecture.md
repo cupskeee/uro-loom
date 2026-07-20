@@ -90,7 +90,7 @@ Recommended default, chosen for a data-dense admin/observability console with a 
 | Graph/DAG | **d3 / a DAG lib** for the timeline + faction graph | The signature views are node-link/DAG |
 | Client gen | **openapi-typescript** off the server schema | Machine-checked contract (§2) |
 | Test | **Vitest + Testing Library + Playwright** | Unit + a smoke E2E against a stub server |
-| BFF (M6) | **a small Node/Hono or FastAPI edge** | Holds tokens, owns identity; keeps admin creds off the browser |
+| BFF (M6) | **a small same-origin session-cookie service** ([`05-bff-design.md`](05-bff-design.md)) | Holds tokens, owns identity; keeps admin creds off the browser |
 
 **Alternatives considered:** SvelteKit (lighter, built-in BFF via server routes — strong if the
 team prefers it; less ubiquitous); SolidStart; a server-rendered stack. The choice is a genuine
