@@ -187,7 +187,7 @@ export function CampaignsPage() {
                         <span className="text-neutral-600">registry default</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 font-mono text-neutral-400">{c.seed}</td>
+                    <td className="px-4 py-2 font-mono text-neutral-400">{c.seed ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

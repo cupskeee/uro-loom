@@ -38,13 +38,15 @@ export interface Campaign {
   branch_id: string
   ruleset_id: string
   ruleset_version: string
-  seed: number
+  // Operator-only: the server strips `seed` for a player token (it makes deterministic combat
+  // predictable — GM data). A player-tier read has NO `seed` key, so treat it as optional.
+  seed?: number
 }
 
 /**
  * GET /campaigns/{id}/roster → { pcs: string[] }.
- * `pcs` are actor-id STRINGS (not objects). NOTE: this endpoint does no existence
- * check — a missing campaign returns 200 { pcs: [] }, not 404.
+ * `pcs` are actor-id STRINGS (not objects). A missing campaign 404s (like every sibling
+ * read) — QueryBoundary surfaces that as an error box, not an empty roster.
  */
 export interface RosterResponse {
   pcs: string[]
@@ -241,7 +243,8 @@ export interface LogEntry {
 /** GET /worlds/{w}/log[?branch=&limit=] → a branch's lineage. Any-authed read. */
 export interface LogResponse {
   branch: string
-  commits: LogEntry[]
+  head_depth?: number
+  entries: LogEntry[] // the server's field name (NOT `commits` — that drift crashed the timeline)
 }
 
 /**
