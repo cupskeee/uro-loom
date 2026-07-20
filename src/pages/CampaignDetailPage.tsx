@@ -49,6 +49,9 @@ export function CampaignDetailPage() {
         <NavLink to="state" className={tab}>
           State
         </NavLink>
+        <NavLink to="epistemics" className={tab}>
+          Epistemics
+        </NavLink>
         <NavLink to="chronicle" className={tab}>
           Chronicle
         </NavLink>

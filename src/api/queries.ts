@@ -9,6 +9,7 @@ import {
   getCampaignState,
   getChronicle,
   getCommit,
+  getEpistemicState,
   getEvents,
   getLog,
   getRoster,
@@ -118,5 +119,16 @@ export function useCommit(worldId: string, commitId: string) {
     queryKey: ['commit', connection?.baseUrl, worldId, commitId],
     enabled: !!connection && !!worldId && !!commitId,
     queryFn: ({ signal }) => getCommit(connection!, worldId, commitId, signal),
+  })
+}
+
+// ---- M4 slice 3: epistemic explorer (operator-only, D-46) -----------------------
+
+export function useEpistemicState(campaignId: string) {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['epistemic', connection?.baseUrl, campaignId],
+    enabled: !!connection && !!campaignId,
+    queryFn: ({ signal }) => getEpistemicState(connection!, campaignId, signal),
   })
 }

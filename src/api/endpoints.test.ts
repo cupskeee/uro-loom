@@ -4,6 +4,7 @@ import {
   getCampaign,
   getChronicle,
   getCommit,
+  getEpistemicState,
   getEvents,
   getLog,
   getRoster,
@@ -124,5 +125,13 @@ describe('M4 slice 2: events + commit detail', () => {
     const urls = captureFetch()
     await getCommit(conn, 'wld_1', 'cmt/9')
     expect(urls[0]).toBe('http://server.test/worlds/wld_1/commits/cmt%2F9')
+  })
+})
+
+describe('M4 slice 3: epistemic explorer', () => {
+  it('getEpistemicState requests the operator-only claims,beliefs sections', async () => {
+    const urls = captureFetch()
+    await getEpistemicState(conn, 'cmp_1')
+    expect(urls[0]).toBe('http://server.test/campaigns/cmp_1/state?sections=claims,beliefs')
   })
 })

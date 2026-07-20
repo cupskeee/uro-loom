@@ -14,6 +14,7 @@ import type {
   CreateMarkerRequest,
   CreateWorldRequest,
   CreateWorldResponse,
+  EpistemicState,
   EventFilters,
   EventsResponse,
   ForkRequest,
@@ -101,6 +102,22 @@ export function getChronicle(
   return apiFetch<ChronicleResponse>(conn, `/campaigns/${enc(campaignId)}/chronicle${q}`, {
     signal,
   })
+}
+
+/**
+ * GET /campaigns/{id}/state?sections=claims,beliefs — the epistemic layer (claims'
+ * truth values + who believes them). OPERATOR-only (D-46): a player token → 403.
+ */
+export function getEpistemicState(
+  conn: Connection,
+  campaignId: string,
+  signal?: AbortSignal,
+): Promise<EpistemicState> {
+  return apiFetch<EpistemicState>(
+    conn,
+    `/campaigns/${enc(campaignId)}/state?sections=claims,beliefs`,
+    { signal },
+  )
 }
 
 // ---- M4: timelines (world-scoped reads) ----------------------------------------

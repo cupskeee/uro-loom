@@ -118,6 +118,48 @@ const STATE = {
           description: 'Fire-worshippers who foretold the meteor.',
         },
       ],
+      // OMNISCIENT sections (operator-only, D-46). truth values + hidden beliefs.
+      claims: [
+        {
+          claim_id: 'c:meteor',
+          statement: 'the meteor will fall on Vel',
+          subject_refs: ['place_vel'],
+          truth: 'true',
+          origin: 'narrator',
+          created_day: 8,
+        },
+        {
+          claim_id: 'c:heir',
+          statement: 'the lost heir of House Vale still lives',
+          subject_refs: ['actor_doran'],
+          truth: 'unknown',
+          origin: 'testimony',
+          created_day: 5,
+        },
+        {
+          claim_id: 'c:traitor',
+          statement: 'Kestrel betrayed the Gray Watch',
+          subject_refs: ['actor_kestrel'],
+          truth: 'false',
+          origin: 'testimony',
+          created_day: 10,
+        },
+      ],
+      beliefs: [
+        {
+          actor_id: 'actor_kestrel',
+          claim_id: 'c:meteor',
+          confidence: 0.9,
+          learned_from: 'actor_elder',
+        },
+        {
+          actor_id: 'actor_wren',
+          claim_id: 'c:meteor',
+          confidence: 0.5,
+          learned_from: 'actor_kestrel',
+        },
+        { actor_id: 'actor_wren', claim_id: 'c:heir', confidence: 0.3, learned_from: null },
+      ],
     },
   },
 }
@@ -728,7 +770,16 @@ const server = createServer((req, res) => {
     // state/chronicle 404 on a missing campaign (like the real handlers).
     if (sub === 'state') {
       if (!campaign) return send(res, 404, { detail: 'no such campaign' })
-      return send(res, 200, STATE[id] ?? emptyState(campaign.branch_id))
+      const raw = url.searchParams.get('sections') || 'actors,threads,places,factions'
+      const sections = raw.split(',').map((s) => s.trim())
+      // D-46: the omniscient sections are operator-only; a player token → 403.
+      const OMNI = new Set(['claims', 'beliefs', 'sheets', 'items', 'edges', 'counters'])
+      if (sections.some((s) => OMNI.has(s)) && !isOperator(token))
+        return send(res, 403, { detail: `operator token required for: ${sections.join(', ')}` })
+      const full = (STATE[id] ?? emptyState(campaign.branch_id)).state
+      const out = {}
+      for (const s of sections) out[s] = full[s] ?? []
+      return send(res, 200, { branch_id: campaign.branch_id, state: out })
     }
     if (sub === 'chronicle') {
       if (!campaign) return send(res, 404, { detail: 'no such campaign' })
