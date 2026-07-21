@@ -507,3 +507,56 @@ export interface UsageResponse {
   total_calls: number
   by_stage: UsageRow[]
 }
+
+// ---- Model-connection registry (D-47, docs/20 — the /providers surface; operator-only) ----------
+
+/** A connected provider endpoint. `cached_models` is populated by a later engine slice (refresh). */
+export interface ModelConnection {
+  id: string
+  name: string
+  provider: string // anthropic | openai | openai_compat | local | stub | …
+  base_url: string | null
+  auth_id: string | null
+  is_enabled: boolean
+  cached_models: { id: string; modality: string }[] | null
+}
+
+/** Credential METADATA — the server NEVER returns the secret (only `has_access_token`). */
+export interface ProviderCredential {
+  id: string
+  provider: string
+  auth_mode: string // api_key | oauth_pkce | oauth_device
+  has_access_token: boolean
+  has_refresh_token: boolean
+  last_refresh: string | null
+}
+
+/** role ∈ default | narrator | extractor | planner | embedder | dialogue | judge → connection+model. */
+export interface RoleBinding {
+  role: string
+  connection_id: string
+  model: string
+}
+
+/** GET /providers → the full registry snapshot (OPERATOR-only, D-47). No secrets. */
+export interface ProvidersResponse {
+  connections: ModelConnection[]
+  roles: RoleBinding[]
+  credentials: ProviderCredential[]
+}
+
+export interface CreateConnectionRequest {
+  name: string
+  provider: string
+  base_url?: string
+  auth_id?: string
+}
+export interface CreateCredentialRequest {
+  provider: string
+  access_token: string
+  auth_mode?: string
+}
+export interface SetRoleRequest {
+  connection_id: string
+  model: string
+}

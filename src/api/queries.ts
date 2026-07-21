@@ -15,6 +15,7 @@ import {
   getEvents,
   getLog,
   getRoster,
+  getProviders,
   getRulesets,
   getUsage,
   listBranches,
@@ -176,5 +177,15 @@ export function useUsage(stage?: string) {
     queryKey: ['usage', connection?.baseUrl, stage ?? null],
     enabled: !!connection,
     queryFn: ({ signal }) => getUsage(connection!, stage, signal),
+  })
+}
+
+/** GET /providers → the model-connection registry snapshot (OPERATOR-only, D-47). */
+export function useProviders() {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['providers', connection?.baseUrl],
+    enabled: !!connection,
+    queryFn: ({ signal }) => getProviders(connection!, signal),
   })
 }

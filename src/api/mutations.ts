@@ -4,6 +4,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useConnection } from '../config/connection'
+import type { Connection } from './client'
 import {
   backfillPack,
   createCampaign,
@@ -22,6 +23,13 @@ import {
   reportOutcome,
   revokeToken,
   timeSkip,
+  createConnection,
+  setConnectionEnabled,
+  deleteConnection,
+  createCredential,
+  deleteCredential,
+  setRoleBinding,
+  deleteRoleBinding,
 } from './endpoints'
 import type {
   CodexAddRequest,
@@ -37,6 +45,9 @@ import type {
   OutcomeBundle,
   RevokeTokenRequest,
   TimeSkipRequest,
+  CreateConnectionRequest,
+  CreateCredentialRequest,
+  SetRoleRequest,
 } from './types'
 
 export function useCreateWorld() {
@@ -195,4 +206,45 @@ export function useAddCodexNote(campaignId: string) {
     mutationFn: (body: CodexAddRequest) => addCodexNote(connection!, campaignId, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['codex', connection?.baseUrl, campaignId] }),
   })
+}
+
+// ---- M6: model-connection registry (D-47, /providers — all operator-only) -----------------------
+
+/** Invalidate the registry snapshot after any provider write. Generic over the result so callers
+ * keep their typed `.data` (e.g. the new id). */
+function useProviderMutation<TArgs, TResult>(
+  fn: (conn: Connection, args: TArgs) => Promise<TResult>,
+) {
+  const { connection } = useConnection()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: TArgs) => fn(connection!, args),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['providers', connection?.baseUrl] }),
+  })
+}
+
+export function useCreateConnection() {
+  return useProviderMutation((conn, body: CreateConnectionRequest) => createConnection(conn, body))
+}
+export function useSetConnectionEnabled() {
+  return useProviderMutation((conn, a: { id: string; is_enabled: boolean }) =>
+    setConnectionEnabled(conn, a.id, a.is_enabled),
+  )
+}
+export function useDeleteConnection() {
+  return useProviderMutation((conn, id: string) => deleteConnection(conn, id))
+}
+export function useCreateCredential() {
+  return useProviderMutation((conn, body: CreateCredentialRequest) => createCredential(conn, body))
+}
+export function useDeleteCredential() {
+  return useProviderMutation((conn, id: string) => deleteCredential(conn, id))
+}
+export function useSetRoleBinding() {
+  return useProviderMutation((conn, a: { role: string; body: SetRoleRequest }) =>
+    setRoleBinding(conn, a.role, a.body),
+  )
+}
+export function useDeleteRoleBinding() {
+  return useProviderMutation((conn, role: string) => deleteRoleBinding(conn, role))
 }

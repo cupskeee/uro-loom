@@ -447,3 +447,49 @@ test('ops (M6): a player sees rulesets but usage needs an operator token (D-44)'
   await expect(page.getByTestId('operator-required')).toBeVisible()
   await expect(page.getByTestId('usage-result')).toHaveCount(0)
 })
+
+test('providers (M6): operator configures a credential → connection → role binding (D-47)', async ({
+  page,
+}) => {
+  await connect(page) // dev-token → operator
+  await page.getByRole('link', { name: 'Providers' }).click()
+  await expect(page.getByTestId('providers-page')).toBeVisible()
+
+  // Add a credential — the plaintext key is entered but must never be echoed back.
+  await page.getByTestId('cred-key').fill('sk-e2e-secret')
+  await page.getByTestId('cred-submit').click()
+  await expect(page.getByTestId('cred-feedback')).toContainText('stored')
+  await expect(page.getByTestId('credential-list')).toContainText('key set')
+
+  // Add a connection linked to that credential (the first real option after the placeholder).
+  await page.getByTestId('conn-name').fill('e2e-oai')
+  await page.getByTestId('conn-cred').selectOption({ index: 1 })
+  await page.getByTestId('conn-submit').click()
+  await expect(page.getByTestId('connection-row').filter({ hasText: 'e2e-oai' })).toContainText(
+    'keyed',
+  )
+
+  // Bind the narrator role to that connection.
+  await page.getByTestId('role-name').selectOption('narrator')
+  await page.getByTestId('role-connection').selectOption({ label: 'e2e-oai (openai)' })
+  await page.getByTestId('role-model').fill('gpt-4o')
+  await page.getByTestId('role-submit').click()
+  await expect(page.getByTestId('role-feedback')).toContainText('bound')
+  await expect(page.getByTestId('role-row').filter({ hasText: 'narrator' })).toContainText('gpt-4o')
+
+  // The secret must NOT appear anywhere on the page (encrypted at rest, never returned).
+  await expect(page.locator('body')).not.toContainText('sk-e2e-secret')
+})
+
+test('providers (M6): a player token gets the operator-required panel (D-47)', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('server-url').fill(STUB_URL)
+  await page.getByTestId('token').fill('player-1') // the stub treats player* as a non-operator
+  await page.getByTestId('connect').click()
+  await expect(page.getByTestId('health-badge')).toHaveAttribute('data-status', 'ok', {
+    timeout: 10_000,
+  })
+  await page.goto('/providers')
+  await expect(page.getByTestId('operator-required')).toBeVisible()
+  await expect(page.getByTestId('provider-section')).toHaveCount(0)
+})

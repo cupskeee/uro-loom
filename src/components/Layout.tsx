@@ -28,6 +28,9 @@ export function Layout() {
             <NavLink to="/ops" className={navItem}>
               Ops
             </NavLink>
+            <NavLink to="/providers" className={navItem}>
+              Providers
+            </NavLink>
           </nav>
         </div>
         <div className="flex items-center gap-3">
