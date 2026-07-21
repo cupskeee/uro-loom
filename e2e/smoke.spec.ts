@@ -520,7 +520,12 @@ test('providers (M6): refresh discovers models, the role picker uses them, reloa
   await page.getByTestId('role-model').selectOption('gpt-4o') // an option from cached_models
   await page.getByTestId('role-submit').click()
   await expect(page.getByTestId('role-feedback')).toContainText('bound')
-  await expect(page.getByTestId('role-row').filter({ hasText: 'narrator' })).toContainText('gpt-4o')
+  const narratorRow = page.getByTestId('role-row').filter({ hasText: 'narrator' })
+  await expect(narratorRow).toContainText('gpt-4o')
+
+  // per-role test button probes the EXACT bound connection+model → ✓ (this PR)
+  await narratorRow.getByTestId('role-test').click()
+  await expect(narratorRow.getByTestId('role-test-result')).toContainText('responded')
 
   // reload the instance router from the registry (slice 4)
   await page.getByTestId('reload-router').click()
