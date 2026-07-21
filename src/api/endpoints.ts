@@ -42,6 +42,9 @@ import type {
   CreateConnectionRequest,
   CreateCredentialRequest,
   ProvidersResponse,
+  RefreshModelsResponse,
+  ReloadRouterResponse,
+  TestConnectionResponse,
   RevokeTokenRequest,
   RevokeTokenResponse,
   RosterResponse,
@@ -482,4 +485,26 @@ export function setRoleBinding(
 
 export function deleteRoleBinding(conn: Connection, role: string): Promise<{ deleted: boolean }> {
   return apiFetch<{ deleted: boolean }>(conn, `/providers/roles/${enc(role)}`, { method: 'DELETE' })
+}
+
+/** POST /providers/{id}/refresh — discover a connection's models (operator, slice 3). */
+export function refreshConnection(conn: Connection, id: string): Promise<RefreshModelsResponse> {
+  return apiFetch<RefreshModelsResponse>(conn, `/providers/${enc(id)}/refresh`, { method: 'POST' })
+}
+
+/** POST /providers/{id}/test — probe a connection with a 1-token call (operator, slice 3). */
+export function testConnection(
+  conn: Connection,
+  id: string,
+  model?: string,
+): Promise<TestConnectionResponse> {
+  return apiFetch<TestConnectionResponse>(conn, `/providers/${enc(id)}/test`, {
+    method: 'POST',
+    body: { model },
+  })
+}
+
+/** POST /providers/reload — rebuild the instance router from the registry (operator, slice 4). */
+export function reloadRouter(conn: Connection): Promise<ReloadRouterResponse> {
+  return apiFetch<ReloadRouterResponse>(conn, '/providers/reload', { method: 'POST' })
 }

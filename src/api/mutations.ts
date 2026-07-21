@@ -30,6 +30,9 @@ import {
   deleteCredential,
   setRoleBinding,
   deleteRoleBinding,
+  refreshConnection,
+  testConnection,
+  reloadRouter,
 } from './endpoints'
 import type {
   CodexAddRequest,
@@ -247,4 +250,20 @@ export function useSetRoleBinding() {
 }
 export function useDeleteRoleBinding() {
   return useProviderMutation((conn, role: string) => deleteRoleBinding(conn, role))
+}
+
+export function useRefreshConnection() {
+  // discovery writes cached_models → invalidate the snapshot so the pickers refresh
+  return useProviderMutation((conn, id: string) => refreshConnection(conn, id))
+}
+export function useReloadRouter() {
+  const { connection } = useConnection()
+  return useMutation({ mutationFn: () => reloadRouter(connection!) })
+}
+export function useTestConnection() {
+  // a probe — no state change, so no invalidation
+  const { connection } = useConnection()
+  return useMutation({
+    mutationFn: (a: { id: string; model?: string }) => testConnection(connection!, a.id, a.model),
+  })
 }

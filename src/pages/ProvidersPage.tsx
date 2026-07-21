@@ -6,11 +6,14 @@ import {
   useDeleteConnection,
   useDeleteCredential,
   useDeleteRoleBinding,
+  useRefreshConnection,
+  useReloadRouter,
   useSetConnectionEnabled,
   useSetRoleBinding,
+  useTestConnection,
 } from '../api/mutations'
 import { errorMessage, isForbidden } from '../api/errors'
-import type { ProvidersResponse } from '../api/types'
+import type { ModelConnection, ProvidersResponse } from '../api/types'
 import { QueryBoundary } from '../components/QueryBoundary'
 import { Badge, Card, IdChip, PageHeading } from '../components/ui'
 import { Feedback, Submit, TextField } from '../components/forms'
@@ -160,8 +163,6 @@ function CredentialsSection({ data }: { data: ProvidersResponse }) {
 
 function ConnectionsSection({ data }: { data: ProvidersResponse }) {
   const add = useCreateConnection()
-  const toggle = useSetConnectionEnabled()
-  const del = useDeleteConnection()
   const [name, setName] = useState('')
   const [provider, setProvider] = useState('openai')
   const [baseUrl, setBaseUrl] = useState('')
@@ -238,42 +239,89 @@ function ConnectionsSection({ data }: { data: ProvidersResponse }) {
       ) : (
         <ul className="space-y-2" data-testid="connection-list">
           {data.connections.map((c) => (
-            <li
-              key={c.id}
-              className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-800 p-2 text-sm"
-              data-testid="connection-row"
-            >
-              <span className="font-medium text-neutral-200">{c.name}</span>
-              <Badge tone="indigo">{c.provider}</Badge>
-              {c.base_url && <span className="text-xs text-neutral-500">{c.base_url}</span>}
-              {c.auth_id ? (
-                <Badge tone="green">keyed</Badge>
-              ) : (
-                <span className="text-xs text-neutral-600">keyless</span>
-              )}
-              {!c.is_enabled && <Badge tone="amber">disabled</Badge>}
-              <IdChip>{c.id}</IdChip>
-              <div className="ml-auto flex items-center gap-3">
-                <button
-                  onClick={() => toggle.mutate({ id: c.id, is_enabled: !c.is_enabled })}
-                  data-testid="connection-toggle"
-                  className="text-xs text-neutral-400 hover:text-neutral-200"
-                >
-                  {c.is_enabled ? 'disable' : 'enable'}
-                </button>
-                <button
-                  onClick={() => del.mutate(c.id)}
-                  data-testid="connection-delete"
-                  className="text-xs text-red-400 hover:text-red-300"
-                >
-                  delete
-                </button>
-              </div>
-            </li>
+            <ConnectionRow key={c.id} conn={c} />
           ))}
         </ul>
       )}
     </Section>
+  )
+}
+
+function ConnectionRow({ conn }: { conn: ModelConnection }) {
+  const toggle = useSetConnectionEnabled()
+  const del = useDeleteConnection()
+  const refresh = useRefreshConnection()
+  const test = useTestConnection()
+  const probeModel = conn.cached_models?.[0]?.id // test the first discovered model (else server default)
+  const btn = 'text-xs text-neutral-400 hover:text-neutral-200 disabled:opacity-50'
+  return (
+    <li
+      className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-800 p-2 text-sm"
+      data-testid="connection-row"
+    >
+      <span className="font-medium text-neutral-200">{conn.name}</span>
+      <Badge tone="indigo">{conn.provider}</Badge>
+      {conn.base_url && <span className="text-xs text-neutral-500">{conn.base_url}</span>}
+      {conn.auth_id ? (
+        <Badge tone="green">keyed</Badge>
+      ) : (
+        <span className="text-xs text-neutral-600">keyless</span>
+      )}
+      {!conn.is_enabled && <Badge tone="amber">disabled</Badge>}
+      {conn.cached_models && (
+        <span className="text-xs text-neutral-500" data-testid="conn-model-count">
+          {conn.cached_models.length} models
+        </span>
+      )}
+      <IdChip>{conn.id}</IdChip>
+      <div className="ml-auto flex items-center gap-3">
+        <button
+          onClick={() => refresh.mutate(conn.id)}
+          disabled={refresh.isPending}
+          data-testid="conn-refresh"
+          className={btn}
+        >
+          {refresh.isPending ? 'refreshing…' : 'refresh models'}
+        </button>
+        <button
+          onClick={() => test.mutate({ id: conn.id, model: probeModel })}
+          disabled={test.isPending}
+          data-testid="conn-test"
+          className={btn}
+        >
+          {test.isPending ? 'testing…' : 'test'}
+        </button>
+        <button
+          onClick={() => toggle.mutate({ id: conn.id, is_enabled: !conn.is_enabled })}
+          data-testid="connection-toggle"
+          className={btn}
+        >
+          {conn.is_enabled ? 'disable' : 'enable'}
+        </button>
+        <button
+          onClick={() => del.mutate(conn.id)}
+          data-testid="connection-delete"
+          className="text-xs text-red-400 hover:text-red-300"
+        >
+          delete
+        </button>
+      </div>
+      {(refresh.isError || refresh.isSuccess || test.isSuccess || test.isError) && (
+        <div className="w-full text-xs" data-testid="conn-result">
+          {refresh.isError && <span className="text-red-300">{writeError(refresh.error)}</span>}
+          {refresh.isSuccess && (
+            <span className="text-neutral-400">discovered {refresh.data.models.length} models</span>
+          )}
+          {test.isError && <span className="text-red-300">{writeError(test.error)}</span>}
+          {test.isSuccess && (
+            <span className={test.data.ok ? 'text-green-400' : 'text-red-300'}>
+              {test.data.ok ? '✓ ' : '✗ '}
+              {test.data.detail}
+            </span>
+          )}
+        </div>
+      )}
+    </li>
   )
 }
 
@@ -284,6 +332,8 @@ function RolesSection({ data }: { data: ProvidersResponse }) {
   const [connectionId, setConnectionId] = useState('')
   const [model, setModel] = useState('')
   const bound = new Map(data.roles.map((b) => [b.role, b]))
+  const selectedConn = data.connections.find((c) => c.id === connectionId)
+  const models = selectedConn?.cached_models // populated by "refresh models" → a picker
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -310,7 +360,10 @@ function RolesSection({ data }: { data: ProvidersResponse }) {
         <Select
           label="Connection"
           value={connectionId}
-          onChange={setConnectionId}
+          onChange={(v) => {
+            setConnectionId(v)
+            setModel('') // a stale model from another connection shouldn't carry over
+          }}
           testid="role-connection"
           placeholder="— pick a connection —"
           options={data.connections.map((c) => ({
@@ -318,14 +371,25 @@ function RolesSection({ data }: { data: ProvidersResponse }) {
             label: `${c.name} (${c.provider})`,
           }))}
         />
-        <TextField
-          label="Model"
-          value={model}
-          onChange={setModel}
-          required
-          testid="role-model"
-          placeholder="gpt-4o"
-        />
+        {models && models.length > 0 ? (
+          <Select
+            label="Model"
+            value={model}
+            onChange={setModel}
+            testid="role-model"
+            placeholder="— pick a model —"
+            options={models.map((m) => ({ value: m.id, label: `${m.id} · ${m.modality}` }))}
+          />
+        ) : (
+          <TextField
+            label="Model"
+            value={model}
+            onChange={setModel}
+            required
+            testid="role-model"
+            placeholder="gpt-4o (refresh the connection for a picker)"
+          />
+        )}
         <div className="flex items-end">
           <Submit pending={bind.isPending} testid="role-submit">
             Bind
@@ -369,6 +433,31 @@ function RolesSection({ data }: { data: ProvidersResponse }) {
   )
 }
 
+function ReloadButton() {
+  const reload = useReloadRouter()
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={() => {
+          reload.reset()
+          reload.mutate()
+        }}
+        disabled={reload.isPending}
+        data-testid="reload-router"
+        className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+      >
+        {reload.isPending ? 'reloading…' : 'Reload router'}
+      </button>
+      {reload.isSuccess && (
+        <span className="text-xs text-neutral-400" data-testid="reload-result">
+          {reload.data.reloaded ? 'router rebound from the registry' : (reload.data.detail ?? '')}
+        </span>
+      )}
+      {reload.isError && <span className="text-xs text-red-300">{writeError(reload.error)}</span>}
+    </div>
+  )
+}
+
 export function ProvidersPage() {
   const query = useProviders()
   return (
@@ -376,6 +465,7 @@ export function ProvidersPage() {
       <PageHeading
         title="Providers"
         subtitle="Configure the LLM provider registry for this uro instance (D-47). Operator-only; keys are encrypted at rest. At `uro serve` startup the router is built from these bindings, else the --provider/uro.toml seed."
+        actions={<ReloadButton />}
       />
       <QueryBoundary query={query}>
         {(data: ProvidersResponse) => (

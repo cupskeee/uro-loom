@@ -560,3 +560,18 @@ export interface SetRoleRequest {
   connection_id: string
   model: string
 }
+
+/** POST /providers/{id}/refresh → the connection's discovered models (slice 3). */
+export interface RefreshModelsResponse {
+  models: { id: string; modality: string }[]
+}
+/** POST /providers/{id}/test → a 1-token probe result (slice 3). */
+export interface TestConnectionResponse {
+  ok: boolean
+  detail: string
+}
+/** POST /providers/reload → rebuild the instance router from the registry (slice 4). */
+export interface ReloadRouterResponse {
+  reloaded: boolean
+  detail?: string
+}
