@@ -545,6 +545,23 @@ export interface ProvidersResponse {
   credentials: ProviderCredential[]
 }
 
+/** POST /providers/codex/start — begins a Codex (ChatGPT-subscription) OAuth device login. */
+export interface CodexStartResponse {
+  login_id: string
+  user_code: string
+  verification_uri: string
+  interval: number
+  expires_in: number
+}
+
+/** POST /providers/codex/poll — `pending` until the user approves, then `connected`. */
+export interface CodexPollResponse {
+  status: 'pending' | 'connected'
+  connection_id?: string
+  credential_id?: string
+  models?: { id: string; modality: string }[]
+}
+
 export interface CreateConnectionRequest {
   name: string
   provider: string

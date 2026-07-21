@@ -43,6 +43,8 @@ import type {
   CreateCredentialRequest,
   ProvidersResponse,
   RefreshModelsResponse,
+  CodexPollResponse,
+  CodexStartResponse,
   ReloadRouterResponse,
   TestConnectionResponse,
   RevokeTokenRequest,
@@ -507,4 +509,20 @@ export function testConnection(
 /** POST /providers/reload — rebuild the instance router from the registry (operator, slice 4). */
 export function reloadRouter(conn: Connection): Promise<ReloadRouterResponse> {
   return apiFetch<ReloadRouterResponse>(conn, '/providers/reload', { method: 'POST' })
+}
+
+/** POST /providers/codex/start — begin a Codex OAuth device login (operator, D-47). */
+export function codexStart(conn: Connection, name: string): Promise<CodexStartResponse> {
+  return apiFetch<CodexStartResponse>(conn, '/providers/codex/start', {
+    method: 'POST',
+    body: { name },
+  })
+}
+
+/** POST /providers/codex/poll — poll a pending Codex login until connected (operator, D-47). */
+export function codexPoll(conn: Connection, loginId: string): Promise<CodexPollResponse> {
+  return apiFetch<CodexPollResponse>(conn, '/providers/codex/poll', {
+    method: 'POST',
+    body: { login_id: loginId },
+  })
 }

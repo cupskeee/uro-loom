@@ -557,3 +557,20 @@ test('providers (M6): the embedder role rejects a chat model, accepts an embeddi
     'text-embedding-3-small',
   )
 })
+
+test('providers (D-47): Codex OAuth device login shows a code and connects', async ({ page }) => {
+  await connect(page) // operator
+  await page.getByRole('link', { name: 'Providers' }).click()
+
+  // launch the Codex login → the modal shows the device code + Authorize button
+  await page.getByTestId('codex-connect').click()
+  const modal = page.getByTestId('codex-modal')
+  await expect(modal.getByTestId('codex-user-code')).toContainText('J7DE-8NXJS')
+  await expect(modal.getByTestId('codex-authorize')).toBeVisible()
+
+  // the stub polls pending once, then connects → a codex connection appears in the list
+  await expect(modal.getByTestId('codex-connected')).toBeVisible({ timeout: 10_000 })
+  const row = page.getByTestId('connection-row').filter({ hasText: 'ChatGPT (Codex)' })
+  await expect(row).toBeVisible({ timeout: 10_000 })
+  await expect(row).toContainText('codex')
+})
