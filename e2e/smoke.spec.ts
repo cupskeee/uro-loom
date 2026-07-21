@@ -526,3 +526,29 @@ test('providers (M6): refresh discovers models, the role picker uses them, reloa
   await page.getByTestId('reload-router').click()
   await expect(page.getByTestId('reload-result')).toContainText('rebound')
 })
+
+test('providers (M6): the embedder role rejects a chat model, accepts an embedding one (D-47 review)', async ({
+  page,
+}) => {
+  await connect(page) // operator
+  await page.getByRole('link', { name: 'Providers' }).click()
+  await page.getByTestId('conn-name').fill('embed-oai')
+  await page.getByTestId('conn-provider').selectOption('openai')
+  await page.getByTestId('conn-submit').click()
+  const row = page.getByTestId('connection-row').filter({ hasText: 'embed-oai' })
+  await row.getByTestId('conn-refresh').click() // canned: gpt-4o (chat) + text-embedding-3-small
+  await expect(row.getByTestId('conn-model-count')).toContainText('models')
+
+  await page.getByTestId('role-name').selectOption('embedder')
+  await page.getByTestId('role-connection').selectOption({ label: 'embed-oai (openai)' })
+  // a CHAT model → the server's slice-3 validation surfaces as the role error
+  await page.getByTestId('role-model').selectOption('gpt-4o')
+  await page.getByTestId('role-submit').click()
+  await expect(page.getByTestId('role-feedback')).toContainText('embedding model')
+  // an EMBEDDING model binds cleanly
+  await page.getByTestId('role-model').selectOption('text-embedding-3-small')
+  await page.getByTestId('role-submit').click()
+  await expect(page.getByTestId('role-row').filter({ hasText: 'embedder' })).toContainText(
+    'text-embedding-3-small',
+  )
+})
