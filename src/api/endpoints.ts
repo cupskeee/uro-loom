@@ -39,11 +39,15 @@ import type {
   MintTokenResponse,
   OutcomeBundle,
   OutcomeResponse,
+  CreateConnectionRequest,
+  CreateCredentialRequest,
+  ProvidersResponse,
   RevokeTokenRequest,
   RevokeTokenResponse,
   RosterResponse,
   RulesetsResponse,
   ServerInfo,
+  SetRoleRequest,
   TimeSkipRequest,
   TimeSkipResponse,
   UsageResponse,
@@ -424,4 +428,58 @@ export function getUsage(
 ): Promise<UsageResponse> {
   const q = stage ? `?stage=${enc(stage)}` : ''
   return apiFetch<UsageResponse>(conn, `/usage${q}`, { signal })
+}
+
+// --- Model-connection registry (D-47, docs/20 — the /providers surface; all OPERATOR-only) -------
+
+/** GET /providers → the registry snapshot (connections + roles + credential metadata). No secrets. */
+export function getProviders(conn: Connection, signal?: AbortSignal): Promise<ProvidersResponse> {
+  return apiFetch<ProvidersResponse>(conn, '/providers', { signal })
+}
+
+export function createConnection(
+  conn: Connection,
+  body: CreateConnectionRequest,
+): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(conn, '/providers', { method: 'POST', body })
+}
+
+export function setConnectionEnabled(
+  conn: Connection,
+  id: string,
+  is_enabled: boolean,
+): Promise<{ updated: boolean }> {
+  return apiFetch<{ updated: boolean }>(conn, `/providers/${enc(id)}`, {
+    method: 'PATCH',
+    body: { is_enabled },
+  })
+}
+
+export function deleteConnection(conn: Connection, id: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(conn, `/providers/${enc(id)}`, { method: 'DELETE' })
+}
+
+export function createCredential(
+  conn: Connection,
+  body: CreateCredentialRequest,
+): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(conn, '/providers/credentials', { method: 'POST', body })
+}
+
+export function deleteCredential(conn: Connection, id: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(conn, `/providers/credentials/${enc(id)}`, {
+    method: 'DELETE',
+  })
+}
+
+export function setRoleBinding(
+  conn: Connection,
+  role: string,
+  body: SetRoleRequest,
+): Promise<{ role: string; connection_id: string }> {
+  return apiFetch(conn, `/providers/roles/${enc(role)}`, { method: 'PUT', body })
+}
+
+export function deleteRoleBinding(conn: Connection, role: string): Promise<{ deleted: boolean }> {
+  return apiFetch<{ deleted: boolean }>(conn, `/providers/roles/${enc(role)}`, { method: 'DELETE' })
 }

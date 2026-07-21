@@ -11,7 +11,9 @@ const PORT = Number(process.env.PORT ?? 8787)
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  // The real uro-server allows all methods (CORSMiddleware allow_methods=["*"]); mirror that so the
+  // browser doesn't block the /providers PATCH/PUT/DELETE preflight (D-47).
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
 }
 
 // ---- Sample data (matches the exact wire shapes) --------------------------------
@@ -475,6 +477,118 @@ function isOperator(token) {
   return !/^(player|pleb)/i.test(String(token || ''))
 }
 
+// M6: the model-connection registry (D-47). In-memory, mirroring the real server: operator-only,
+// no read returns a secret, deleting a credential UNLINKS connections, deleting a connection
+// cascades its role bindings. No real crypto — the stub keeps the secret aside and never returns it.
+const REGISTRY = { connections: {}, credentials: {}, roles: {}, secrets: {}, n: 0 }
+const REGISTRY_ROLES = new Set([
+  'default',
+  'narrator',
+  'extractor',
+  'planner',
+  'embedder',
+  'dialogue',
+  'judge',
+])
+const regId = (prefix) => `${prefix}_${(REGISTRY.n += 1).toString().padStart(3, '0')}`
+
+function handleProviders(method, p, body, res, token) {
+  if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+  const parts = p.split('/').filter(Boolean) // ['providers', ...]
+
+  // /providers
+  if (parts.length === 1) {
+    if (method === 'GET') {
+      return send(res, 200, {
+        connections: Object.values(REGISTRY.connections),
+        roles: Object.values(REGISTRY.roles),
+        credentials: Object.values(REGISTRY.credentials),
+      })
+    }
+    if (method === 'POST') {
+      if (!body.name || !body.provider)
+        return send(res, 400, { detail: 'name + provider required' })
+      if (body.auth_id && !REGISTRY.credentials[body.auth_id])
+        return send(res, 400, { detail: `no such credential: ${body.auth_id}` })
+      const id = regId('conn')
+      REGISTRY.connections[id] = {
+        id,
+        name: body.name,
+        provider: body.provider,
+        base_url: body.base_url ?? null,
+        auth_id: body.auth_id ?? null,
+        is_enabled: true,
+        cached_models: null,
+      }
+      return send(res, 200, { id })
+    }
+  }
+
+  // /providers/credentials[/{id}]
+  if (parts[1] === 'credentials') {
+    if (parts.length === 2 && method === 'POST') {
+      if (!body.provider) return send(res, 400, { detail: 'provider required' })
+      const id = regId('cred')
+      REGISTRY.credentials[id] = {
+        id,
+        provider: body.provider,
+        auth_mode: body.auth_mode || 'api_key',
+        has_access_token: body.access_token != null,
+        has_refresh_token: false,
+        last_refresh: null,
+      }
+      if (body.access_token != null) REGISTRY.secrets[id] = body.access_token // never returned
+      return send(res, 200, { id })
+    }
+    if (parts.length === 3 && method === 'DELETE') {
+      const id = parts[2]
+      const existed = id in REGISTRY.credentials
+      delete REGISTRY.credentials[id]
+      delete REGISTRY.secrets[id]
+      for (const c of Object.values(REGISTRY.connections)) if (c.auth_id === id) c.auth_id = null // unlink
+      return send(res, 200, { deleted: existed })
+    }
+  }
+
+  // /providers/roles/{role}
+  if (parts[1] === 'roles' && parts.length === 3) {
+    const role = decodeURIComponent(parts[2])
+    if (method === 'PUT') {
+      if (!REGISTRY_ROLES.has(role)) return send(res, 400, { detail: `unknown role ${role}` })
+      if (!REGISTRY.connections[body.connection_id])
+        return send(res, 400, { detail: `no such connection: ${body.connection_id}` })
+      REGISTRY.roles[role] = { role, connection_id: body.connection_id, model: body.model }
+      return send(res, 200, { role, connection_id: body.connection_id })
+    }
+    if (method === 'DELETE') {
+      const existed = role in REGISTRY.roles
+      delete REGISTRY.roles[role]
+      return send(res, 200, { deleted: existed })
+    }
+  }
+
+  // /providers/{id}
+  if (parts.length === 2) {
+    const id = parts[1]
+    if (method === 'PATCH') {
+      const c = REGISTRY.connections[id]
+      if (!c) return send(res, 404, { detail: 'no such connection' })
+      if (body.is_enabled == null) return send(res, 400, { detail: 'nothing to update' })
+      c.is_enabled = !!body.is_enabled
+      return send(res, 200, { updated: true })
+    }
+    if (method === 'DELETE') {
+      const existed = id in REGISTRY.connections
+      delete REGISTRY.connections[id]
+      for (const r of Object.keys(REGISTRY.roles))
+        if (REGISTRY.roles[r].connection_id === id) delete REGISTRY.roles[r] // cascade
+      return send(res, 200, { deleted: existed })
+    }
+  }
+
+  return send(res, 404, { detail: 'not found' })
+}
+
 // Mirror the real server's `_campaign_view`: `seed` is GM data, stripped for a player token. Keeping
 // the stub faithful is what lets the e2e catch a client that assumes `seed` is always present.
 function campaignView(campaign, token) {
@@ -831,6 +945,26 @@ const server = createServer((req, res) => {
   // Everything else requires a bearer token → 401 otherwise (mirrors `_auth`).
   const token = tokenFrom(req, url)
   if (!token) return send(res, 401, { detail: 'unauthorized' })
+
+  // M6: model-connection registry (D-47) — every method, operator-only. Handled BEFORE the generic
+  // POST block so PATCH/PUT/DELETE reach it (the real server's /providers surface).
+  if (p === '/providers' || p.startsWith('/providers/')) {
+    if (req.method === 'GET' || req.method === 'DELETE') {
+      return handleProviders(req.method, p, null, res, token)
+    }
+    const chunks = []
+    req.on('data', (c) => chunks.push(c))
+    req.on('end', () => {
+      let body
+      try {
+        body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+      } catch {
+        return send(res, 400, { detail: 'invalid json' })
+      }
+      handleProviders(req.method, p, body, res, token)
+    })
+    return
+  }
 
   if (req.method === 'POST') {
     const chunks = []
