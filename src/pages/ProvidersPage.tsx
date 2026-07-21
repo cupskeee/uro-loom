@@ -182,6 +182,10 @@ function CodexLoginModal({ name, onClose }: { name: string; onClose: () => void 
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const cancelled = useRef(false)
+  // Read onClose via a ref so the poll effect doesn't depend on it — the parent passes a fresh
+  // arrow each render, which would otherwise re-anchor the poll deadline on every re-render (review).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   // Begin the login once on mount.
   useEffect(() => {
@@ -207,9 +211,10 @@ function CodexLoginModal({ name, onClose }: { name: string; onClose: () => void 
         const res = await codexPoll(connection, data.login_id)
         if (cancelled.current) return
         if (res.status === 'connected') {
-          setPhase('connected')
+          // Let the dedicated connected-effect below handle the auto-close — clearing this effect's
+          // own `timer` on the phase change would cancel a close scheduled here (review [5]).
           qc.invalidateQueries({ queryKey: ['providers', connection.baseUrl] })
-          timer = setTimeout(onClose, 1000)
+          setPhase('connected')
           return
         }
       } catch (e) {
@@ -231,7 +236,15 @@ function CodexLoginModal({ name, onClose }: { name: string; onClose: () => void 
       cancelled.current = true
       clearTimeout(timer)
     }
-  }, [phase, data, connection, qc, onClose])
+  }, [phase, data, connection, qc])
+
+  // Auto-close shortly after a successful connect — its OWN effect (so the poll effect's cleanup
+  // can't cancel it) reading onClose via the ref (so a parent re-render can't re-arm it) (review).
+  useEffect(() => {
+    if (phase !== 'connected') return
+    const t = setTimeout(() => onCloseRef.current(), 1000)
+    return () => clearTimeout(t)
+  }, [phase])
 
   function copy() {
     if (!data) return
