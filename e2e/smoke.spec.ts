@@ -493,3 +493,36 @@ test('providers (M6): a player token gets the operator-required panel (D-47)', a
   await expect(page.getByTestId('operator-required')).toBeVisible()
   await expect(page.getByTestId('provider-section')).toHaveCount(0)
 })
+
+test('providers (M6): refresh discovers models, the role picker uses them, reload rebinds (D-47 slice 3/4)', async ({
+  page,
+}) => {
+  await connect(page) // operator
+  await page.getByRole('link', { name: 'Providers' }).click()
+
+  // a keyless openai connection (the stub returns canned models)
+  await page.getByTestId('conn-name').fill('picker-oai')
+  await page.getByTestId('conn-provider').selectOption('openai')
+  await page.getByTestId('conn-submit').click()
+  const row = page.getByTestId('connection-row').filter({ hasText: 'picker-oai' })
+  await expect(row).toBeVisible()
+
+  // refresh → discovers models; test → ok
+  await row.getByTestId('conn-refresh').click()
+  await expect(row.getByTestId('conn-result')).toContainText('discovered')
+  await expect(row.getByTestId('conn-model-count')).toContainText('models')
+  await row.getByTestId('conn-test').click()
+  await expect(row.getByTestId('conn-result')).toContainText('responded')
+
+  // the role's model field is now a PICKER of the discovered models (a <select>, not free text)
+  await page.getByTestId('role-name').selectOption('narrator')
+  await page.getByTestId('role-connection').selectOption({ label: 'picker-oai (openai)' })
+  await page.getByTestId('role-model').selectOption('gpt-4o') // an option from cached_models
+  await page.getByTestId('role-submit').click()
+  await expect(page.getByTestId('role-feedback')).toContainText('bound')
+  await expect(page.getByTestId('role-row').filter({ hasText: 'narrator' })).toContainText('gpt-4o')
+
+  // reload the instance router from the registry (slice 4)
+  await page.getByTestId('reload-router').click()
+  await expect(page.getByTestId('reload-result')).toContainText('rebound')
+})

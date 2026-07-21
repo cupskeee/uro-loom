@@ -7,6 +7,9 @@ import {
   deleteCredential,
   deleteRoleBinding,
   getProviders,
+  refreshConnection,
+  reloadRouter,
+  testConnection,
   setConnectionEnabled,
   setRoleBinding,
 } from './endpoints'
@@ -96,5 +99,26 @@ describe('provider registry endpoints (D-47)', () => {
     await deleteRoleBinding(conn, 'narrator')
     expect(calls[0].url).toBe('http://s.test/providers/roles/narrator')
     expect(calls[0].init.method).toBe('DELETE')
+  })
+
+  it('refreshConnection POSTs /providers/{id}/refresh', async () => {
+    const calls = capture()
+    await refreshConnection(conn, 'conn_1')
+    expect(calls[0].url).toBe('http://s.test/providers/conn_1/refresh')
+    expect(calls[0].init.method).toBe('POST')
+  })
+
+  it('testConnection POSTs /providers/{id}/test with the model', async () => {
+    const calls = capture()
+    await testConnection(conn, 'conn_1', 'gpt-4o')
+    expect(calls[0].url).toBe('http://s.test/providers/conn_1/test')
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({ model: 'gpt-4o' })
+  })
+
+  it('reloadRouter POSTs /providers/reload', async () => {
+    const calls = capture()
+    await reloadRouter(conn)
+    expect(calls[0].url).toBe('http://s.test/providers/reload')
+    expect(calls[0].init.method).toBe('POST')
   })
 })

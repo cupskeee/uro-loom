@@ -492,9 +492,51 @@ const REGISTRY_ROLES = new Set([
 ])
 const regId = (prefix) => `${prefix}_${(REGISTRY.n += 1).toString().padStart(3, '0')}`
 
+// Canned discovery results per provider (slice 3) — the stub can't call a real provider.
+const CANNED_MODELS = {
+  openai: [
+    { id: 'gpt-4o', modality: 'chat' },
+    { id: 'gpt-4o-mini', modality: 'chat' },
+    { id: 'text-embedding-3-small', modality: 'embedding' },
+  ],
+  anthropic: [
+    { id: 'claude-sonnet-5', modality: 'chat' },
+    { id: 'claude-opus-4-8', modality: 'chat' },
+  ],
+  local: [
+    { id: 'llama3.1', modality: 'chat' },
+    { id: 'nomic-embed-text', modality: 'embedding' },
+  ],
+  stub: [
+    { id: 'stub-chat', modality: 'chat' },
+    { id: 'stub-embed', modality: 'embedding' },
+  ],
+}
+
 function handleProviders(method, p, body, res, token) {
   if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
   const parts = p.split('/').filter(Boolean) // ['providers', ...]
+
+  // POST /providers/reload (slice 4) — rebind the router; reloaded iff the registry has bindings.
+  if (parts.length === 2 && parts[1] === 'reload' && method === 'POST') {
+    const has = Object.keys(REGISTRY.roles).length > 0
+    return send(res, 200, {
+      reloaded: has,
+      detail: has ? undefined : 'registry has no bindings; router unchanged',
+    })
+  }
+
+  // POST /providers/{id}/refresh | /test (slice 3)
+  if (parts.length === 3 && method === 'POST' && (parts[2] === 'refresh' || parts[2] === 'test')) {
+    const conn = REGISTRY.connections[parts[1]]
+    if (!conn) return send(res, 404, { detail: 'no such connection' })
+    if (parts[2] === 'refresh') {
+      const models = CANNED_MODELS[conn.provider] ?? []
+      conn.cached_models = models // so the snapshot's model pickers populate
+      return send(res, 200, { models })
+    }
+    return send(res, 200, { ok: true, detail: `${conn.provider} responded` }) // test probe
+  }
 
   // /providers
   if (parts.length === 1) {
