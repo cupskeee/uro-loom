@@ -513,13 +513,26 @@ const CANNED_MODELS = {
   ],
 }
 
+// Mirror the server's classify_modality (slice 3): per-adapter, no universal is_embedding flag.
+function classifyModality(provider, modelId) {
+  const m = String(modelId || '').toLowerCase()
+  if (provider === 'anthropic') return 'chat'
+  if (['openai', 'openai_compat', 'local', 'stub'].includes(provider))
+    return m.includes('embed') ? 'embedding' : 'chat'
+  return 'unknown'
+}
+
 function handleProviders(method, p, body, res, token) {
   if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
   const parts = p.split('/').filter(Boolean) // ['providers', ...]
 
   // POST /providers/reload (slice 4) — rebind the router; reloaded iff the registry has bindings.
   if (parts.length === 2 && parts[1] === 'reload' && method === 'POST') {
-    const has = Object.keys(REGISTRY.roles).length > 0
+    // Mirror build_router_from_registry: a binding counts only if its connection exists AND is enabled.
+    const has = Object.values(REGISTRY.roles).some((rb) => {
+      const c = REGISTRY.connections[rb.connection_id]
+      return !!c && c.is_enabled
+    })
     return send(res, 200, {
       reloaded: has,
       detail: has ? undefined : 'registry has no bindings; router unchanged',
@@ -597,9 +610,17 @@ function handleProviders(method, p, body, res, token) {
     const role = decodeURIComponent(parts[2])
     if (method === 'PUT') {
       if (!REGISTRY_ROLES.has(role)) return send(res, 400, { detail: `unknown role ${role}` })
-      if (!REGISTRY.connections[body.connection_id])
-        return send(res, 400, { detail: `no such connection: ${body.connection_id}` })
-      REGISTRY.roles[role] = { role, connection_id: body.connection_id, model: body.model }
+      const conn = REGISTRY.connections[body.connection_id]
+      if (!conn) return send(res, 400, { detail: `no such connection: ${body.connection_id}` })
+      const model = String(body.model || '').trim()
+      if (!model) return send(res, 400, { detail: 'model must not be empty' }) // mirror the server
+      // Mirror slice-3 embedder-modality validation: the embedder role needs an embedding model.
+      if (role === 'embedder' && classifyModality(conn.provider, model) === 'chat') {
+        return send(res, 400, {
+          detail: `the embedder role needs an embedding model, not '${model}' (a chat model on provider '${conn.provider}')`,
+        })
+      }
+      REGISTRY.roles[role] = { role, connection_id: body.connection_id, model }
       return send(res, 200, { role, connection_id: body.connection_id })
     }
     if (method === 'DELETE') {

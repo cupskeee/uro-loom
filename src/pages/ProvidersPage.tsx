@@ -44,6 +44,7 @@ function Select({
   options,
   testid,
   placeholder,
+  required,
 }: {
   label: string
   value: string
@@ -51,12 +52,14 @@ function Select({
   options: { value: string; label: string }[]
   testid?: string
   placeholder?: string
+  required?: boolean
 }) {
   return (
     <Field label={label}>
       <select
         data-testid={testid}
         value={value}
+        required={required}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm outline-none focus:border-neutral-500"
       >
@@ -378,6 +381,7 @@ function RolesSection({ data }: { data: ProvidersResponse }) {
             onChange={setModel}
             testid="role-model"
             placeholder="— pick a model —"
+            required
             options={models.map((m) => ({ value: m.id, label: `${m.id} · ${m.modality}` }))}
           />
         ) : (
