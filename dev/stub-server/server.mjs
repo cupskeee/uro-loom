@@ -539,6 +539,42 @@ function handleProviders(method, p, body, res, token) {
     })
   }
 
+  // POST /providers/codex/start | /codex/poll (D-47) — the OAuth device flow. Pending once, then
+  // connects (mints a codex connection) so the UI's poll→connect transition is exercised.
+  if (parts.length === 3 && parts[1] === 'codex' && method === 'POST') {
+    REGISTRY.codexPending = REGISTRY.codexPending || {}
+    if (parts[2] === 'start') {
+      const loginId = `codex_login_${(REGISTRY.n += 1)}`
+      REGISTRY.codexPending[loginId] = { name: (body && body.name) || 'codex', polls: 0 }
+      return send(res, 200, {
+        login_id: loginId,
+        user_code: 'J7DE-8NXJS',
+        verification_uri: 'https://auth.openai.com/codex/device',
+        interval: 1,
+        expires_in: 900,
+      })
+    }
+    if (parts[2] === 'poll') {
+      const pending = REGISTRY.codexPending[body && body.login_id]
+      if (!pending) return send(res, 404, { detail: 'unknown or expired login' })
+      pending.polls += 1
+      if (pending.polls < 2) return send(res, 200, { status: 'pending' })
+      const cid = regId('conn')
+      const models = [{ id: 'gpt-5-codex', modality: 'chat' }]
+      REGISTRY.connections[cid] = {
+        id: cid,
+        name: pending.name,
+        provider: 'codex',
+        base_url: null,
+        auth_id: 'cred_codex',
+        is_enabled: true,
+        cached_models: models,
+      }
+      delete REGISTRY.codexPending[body.login_id]
+      return send(res, 200, { status: 'connected', connection_id: cid, models })
+    }
+  }
+
   // POST /providers/{id}/refresh | /test (slice 3)
   if (parts.length === 3 && method === 'POST' && (parts[2] === 'refresh' || parts[2] === 'test')) {
     const conn = REGISTRY.connections[parts[1]]

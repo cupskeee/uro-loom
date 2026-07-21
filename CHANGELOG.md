@@ -6,6 +6,12 @@ All notable changes to Uro Loom are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Providers: Codex (ChatGPT-subscription) OAuth connect (D-47).** A "Connect ChatGPT (Codex)"
+  action on the Providers page opens an authorize modal — it shows the device code to enter on
+  OpenAI's page (with a Copy button) + an "Authorize with OpenAI ↗" button, then polls until the
+  login connects and the new `codex` connection appears in the list. No API key form; the token
+  exchange and encrypted storage happen server-side. New `codexStart`/`codexPoll` endpoints + a
+  stub-server device flow (pending→connected) for the e2e.
 - **Providers: per-role-binding `test` button (D-47).** Each bound engine role now has its own
   `test` action that probes the EXACT connection + model the role uses (with an isolated ✓/✗
   result line), rather than only the connection-level canary. The connection-level `test` now

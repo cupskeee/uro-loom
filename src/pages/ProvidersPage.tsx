@@ -1,4 +1,5 @@
-import { type FormEvent, type ReactNode, useState } from 'react'
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useProviders } from '../api/queries'
 import {
   useCreateConnection,
@@ -12,8 +13,15 @@ import {
   useSetRoleBinding,
   useTestConnection,
 } from '../api/mutations'
+import { codexPoll, codexStart } from '../api/endpoints'
 import { errorMessage, isForbidden } from '../api/errors'
-import type { ModelConnection, ProvidersResponse, RoleBinding } from '../api/types'
+import type {
+  CodexStartResponse,
+  ModelConnection,
+  ProvidersResponse,
+  RoleBinding,
+} from '../api/types'
+import { useConnection } from '../config/connection'
 import { QueryBoundary } from '../components/QueryBoundary'
 import { Badge, Card, IdChip, PageHeading } from '../components/ui'
 import { Feedback, Submit, TextField } from '../components/forms'
@@ -164,12 +172,175 @@ function CredentialsSection({ data }: { data: ProvidersResponse }) {
   )
 }
 
+/** The Codex (ChatGPT-subscription) OAuth device-login modal: shows the code to enter on OpenAI's
+ *  page + an Authorize button, then polls until the login connects (D-47). Matches nano-abi's UX. */
+function CodexLoginModal({ name, onClose }: { name: string; onClose: () => void }) {
+  const { connection } = useConnection()
+  const qc = useQueryClient()
+  const [data, setData] = useState<CodexStartResponse | null>(null)
+  const [phase, setPhase] = useState<'starting' | 'awaiting' | 'connected' | 'error'>('starting')
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const cancelled = useRef(false)
+  // Read onClose via a ref so the poll effect doesn't depend on it — the parent passes a fresh
+  // arrow each render, which would otherwise re-anchor the poll deadline on every re-render (review).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // Begin the login once on mount.
+  useEffect(() => {
+    if (!connection) return
+    let alive = true
+    codexStart(connection, name)
+      .then((d) => alive && (setData(d), setPhase('awaiting')))
+      .catch((e) => alive && (setError(errorMessage(e)), setPhase('error')))
+    return () => {
+      alive = false
+    }
+  }, [connection, name])
+
+  // Poll while awaiting approval; a connect invalidates the providers snapshot and closes.
+  useEffect(() => {
+    if (phase !== 'awaiting' || !data || !connection) return
+    cancelled.current = false
+    const deadline = Date.now() + data.expires_in * 1000
+    let timer: ReturnType<typeof setTimeout>
+    const tick = async () => {
+      if (cancelled.current) return
+      try {
+        const res = await codexPoll(connection, data.login_id)
+        if (cancelled.current) return
+        if (res.status === 'connected') {
+          // Let the dedicated connected-effect below handle the auto-close — clearing this effect's
+          // own `timer` on the phase change would cancel a close scheduled here (review [5]).
+          qc.invalidateQueries({ queryKey: ['providers', connection.baseUrl] })
+          setPhase('connected')
+          return
+        }
+      } catch (e) {
+        if (!cancelled.current) {
+          setError(errorMessage(e))
+          setPhase('error')
+        }
+        return
+      }
+      if (Date.now() > deadline) {
+        setError('the code expired before you approved it — start again')
+        setPhase('error')
+        return
+      }
+      timer = setTimeout(tick, Math.max(1, data.interval) * 1000)
+    }
+    timer = setTimeout(tick, Math.max(1, data.interval) * 1000)
+    return () => {
+      cancelled.current = true
+      clearTimeout(timer)
+    }
+  }, [phase, data, connection, qc])
+
+  // Auto-close shortly after a successful connect — its OWN effect (so the poll effect's cleanup
+  // can't cancel it) reading onClose via the ref (so a parent re-render can't re-arm it) (review).
+  useEffect(() => {
+    if (phase !== 'connected') return
+    const t = setTimeout(() => onCloseRef.current(), 1000)
+    return () => clearTimeout(t)
+  }, [phase])
+
+  function copy() {
+    if (!data) return
+    navigator.clipboard?.writeText(data.user_code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      data-testid="codex-modal"
+    >
+      <div className="w-full max-w-lg rounded-xl border border-neutral-700 bg-neutral-950 p-6 shadow-xl">
+        {phase === 'error' ? (
+          <div className="space-y-4">
+            <div className="text-sm text-red-300" data-testid="codex-error">
+              {error}
+            </div>
+            <button
+              onClick={onClose}
+              className="text-sm text-neutral-300 hover:text-neutral-100"
+              data-testid="codex-close"
+            >
+              Close
+            </button>
+          </div>
+        ) : phase === 'connected' ? (
+          <div className="space-y-2" data-testid="codex-connected">
+            <div className="text-sm font-medium text-green-400">✓ Connected to ChatGPT (Codex)</div>
+            <div className="text-xs text-neutral-500">
+              The connection is ready — bind it to a role below.
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="text-sm text-neutral-300">
+              Enter this code on the OpenAI authorization page:
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className="font-mono text-2xl tracking-widest text-neutral-100"
+                data-testid="codex-user-code"
+              >
+                {data?.user_code ?? '········'}
+              </span>
+              <button
+                onClick={copy}
+                disabled={!data}
+                data-testid="codex-copy"
+                className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+              >
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            <a
+              href={data?.verification_uri ?? '#'}
+              target="_blank"
+              rel="noreferrer"
+              data-testid="codex-authorize"
+              className={`block rounded-lg px-4 py-3 text-center text-sm font-semibold ${
+                data
+                  ? 'bg-indigo-500 text-white hover:bg-indigo-400'
+                  : 'pointer-events-none bg-neutral-800 text-neutral-500'
+              }`}
+            >
+              Authorize with OpenAI ↗
+            </a>
+            <div className="flex items-center justify-between text-xs text-neutral-500">
+              <span>
+                {phase === 'starting'
+                  ? 'Starting…'
+                  : 'Authorize with OpenAI, then approve the code…'}
+              </span>
+              <button
+                onClick={onClose}
+                data-testid="codex-cancel"
+                className="hover:text-neutral-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ConnectionsSection({ data }: { data: ProvidersResponse }) {
   const add = useCreateConnection()
   const [name, setName] = useState('')
   const [provider, setProvider] = useState('openai')
   const [baseUrl, setBaseUrl] = useState('')
   const [authId, setAuthId] = useState('')
+  const [codexOpen, setCodexOpen] = useState(false)
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -237,6 +408,20 @@ function ConnectionsSection({ data }: { data: ProvidersResponse }) {
           />
         </div>
       </form>
+      <div className="mb-4 flex items-center gap-3 border-t border-neutral-800 pt-4">
+        <div className="text-xs text-neutral-500">
+          Or connect a <span className="text-neutral-300">ChatGPT subscription</span> (Codex) — no
+          API key, via OpenAI sign-in.
+        </div>
+        <button
+          onClick={() => setCodexOpen(true)}
+          data-testid="codex-connect"
+          className="ml-auto rounded-md border border-indigo-500/50 px-3 py-1.5 text-sm text-indigo-300 hover:bg-indigo-500/10"
+        >
+          Connect ChatGPT (Codex)
+        </button>
+      </div>
+      {codexOpen && <CodexLoginModal name="ChatGPT (Codex)" onClose={() => setCodexOpen(false)} />}
       {data.connections.length === 0 ? (
         <div className="text-xs text-neutral-500">No connections yet.</div>
       ) : (
