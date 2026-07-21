@@ -13,7 +13,7 @@ import {
   useTestConnection,
 } from '../api/mutations'
 import { errorMessage, isForbidden } from '../api/errors'
-import type { ModelConnection, ProvidersResponse } from '../api/types'
+import type { ModelConnection, ProvidersResponse, RoleBinding } from '../api/types'
 import { QueryBoundary } from '../components/QueryBoundary'
 import { Badge, Card, IdChip, PageHeading } from '../components/ui'
 import { Feedback, Submit, TextField } from '../components/forms'
@@ -255,7 +255,10 @@ function ConnectionRow({ conn }: { conn: ModelConnection }) {
   const del = useDeleteConnection()
   const refresh = useRefreshConnection()
   const test = useTestConnection()
-  const probeModel = conn.cached_models?.[0]?.id // test the first discovered model (else server default)
+  // The connection-level test is a LIVENESS check — send no model and let the server pick a
+  // known-good canary. Do NOT send cached_models[0]: the discovered list is sorted, so OpenAI's
+  // leads with `babbage-002`, a legacy model the chat-probe can't call (a false ✗). A precise
+  // per-MODEL check lives on each role binding below.
   const btn = 'text-xs text-neutral-400 hover:text-neutral-200 disabled:opacity-50'
   return (
     <li
@@ -287,7 +290,7 @@ function ConnectionRow({ conn }: { conn: ModelConnection }) {
           {refresh.isPending ? 'refreshing…' : 'refresh models'}
         </button>
         <button
-          onClick={() => test.mutate({ id: conn.id, model: probeModel })}
+          onClick={() => test.mutate({ id: conn.id })}
           disabled={test.isPending}
           data-testid="conn-test"
           className={btn}
@@ -328,9 +331,58 @@ function ConnectionRow({ conn }: { conn: ModelConnection }) {
   )
 }
 
+/** One engine-role row: its binding (or "unbound"), plus a live per-MODEL test + unbind. Each owns
+ *  its own test mutation so a ✓/✗ shows only on the role you clicked (mirrors ConnectionRow). */
+function RoleRow({ role, binding }: { role: string; binding: RoleBinding | undefined }) {
+  const unbind = useDeleteRoleBinding()
+  const test = useTestConnection()
+  const btn = 'text-xs text-neutral-400 hover:text-neutral-200 disabled:opacity-50'
+  return (
+    <li className="flex flex-wrap items-center gap-2 text-sm" data-testid="role-row">
+      <span className="w-20 text-neutral-300">{role}</span>
+      {binding ? (
+        <>
+          <span className="text-neutral-500">→</span>
+          <IdChip>{binding.connection_id}</IdChip>
+          <span className="text-neutral-400">{binding.model}</span>
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              onClick={() => test.mutate({ id: binding.connection_id, model: binding.model })}
+              disabled={test.isPending}
+              data-testid="role-test"
+              className={btn}
+            >
+              {test.isPending ? 'testing…' : 'test'}
+            </button>
+            <button
+              onClick={() => unbind.mutate(role)}
+              data-testid="role-unbind"
+              className="text-xs text-red-400 hover:text-red-300"
+            >
+              unbind
+            </button>
+          </div>
+          {(test.isSuccess || test.isError) && (
+            <div className="w-full text-xs" data-testid="role-test-result">
+              {test.isError && <span className="text-red-300">{writeError(test.error)}</span>}
+              {test.isSuccess && (
+                <span className={test.data.ok ? 'text-green-400' : 'text-red-300'}>
+                  {test.data.ok ? '✓ ' : '✗ '}
+                  {test.data.detail}
+                </span>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <span className="text-xs text-neutral-600">— unbound (falls back to default) —</span>
+      )}
+    </li>
+  )
+}
+
 function RolesSection({ data }: { data: ProvidersResponse }) {
   const bind = useSetRoleBinding()
-  const unbind = useDeleteRoleBinding()
   const [role, setRole] = useState('default')
   const [connectionId, setConnectionId] = useState('')
   const [model, setModel] = useState('')
@@ -406,32 +458,9 @@ function RolesSection({ data }: { data: ProvidersResponse }) {
         success={bind.isSuccess ? <span>bound {bind.data.role}</span> : null}
       />
       <ul className="space-y-1" data-testid="role-list">
-        {ROLES.map((r) => {
-          const b = bound.get(r)
-          return (
-            <li key={r} className="flex items-center gap-2 text-sm" data-testid="role-row">
-              <span className="w-20 text-neutral-300">{r}</span>
-              {b ? (
-                <>
-                  <span className="text-neutral-500">→</span>
-                  <IdChip>{b.connection_id}</IdChip>
-                  <span className="text-neutral-400">{b.model}</span>
-                  <button
-                    onClick={() => unbind.mutate(r)}
-                    data-testid="role-unbind"
-                    className="ml-auto text-xs text-red-400 hover:text-red-300"
-                  >
-                    unbind
-                  </button>
-                </>
-              ) : (
-                <span className="text-xs text-neutral-600">
-                  — unbound (falls back to default) —
-                </span>
-              )}
-            </li>
-          )
-        })}
+        {ROLES.map((r) => (
+          <RoleRow key={r} role={r} binding={bound.get(r)} />
+        ))}
       </ul>
     </Section>
   )

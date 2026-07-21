@@ -6,6 +6,13 @@ All notable changes to Uro Loom are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Providers: per-role-binding `test` button (D-47).** Each bound engine role now has its own
+  `test` action that probes the EXACT connection + model the role uses (with an isolated ✓/✗
+  result line), rather than only the connection-level canary. The connection-level `test` now
+  sends no model and lets the server pick a known-good default — it no longer sends
+  `cached_models[0]`, which for OpenAI was the sorted list's head `babbage-002` (a legacy model
+  the chat-probe can't call, a false ✗). Pairs with the uro-server `_default_probe_model` fix.
+
 - **M3 — operate (lifecycle writes that already have endpoints).** Every 🟢 write surface:
   - **New World** (Worlds page) and **New Campaign** (Campaigns page, with a world picker) forms.
   - A campaign **Manage** tab: **Join**, **Mint / Revoke token**, **Time-skip**, and a **Chronicler
