@@ -432,7 +432,7 @@ test('ops (M6): operator sees the ruleset registry + usage telemetry', async ({ 
   await expect(page.getByTestId('usage-row')).toContainText('planner')
 })
 
-test('ops (D-49): extraction policy toggles + Claims disclaimer + authored-only note', async ({
+test('ops (D-49/D-50): extraction policy toggles (incl. factions/threads) + disclaimer', async ({
   page,
 }) => {
   await connect(page) // operator
@@ -440,17 +440,19 @@ test('ops (D-49): extraction policy toggles + Claims disclaimer + authored-only 
   const panel = page.getByTestId('extraction-policy')
   await expect(panel).toBeVisible()
   await expect(panel).toContainText('NEEDS these for recall') // the Claims/Beliefs disclaimer
-  await expect(panel).toContainText('authored-only') // Threads & Factions note
+  await expect(panel).toContainText('relational') // the D-50 note (replaces "authored-only")
+  // Factions + Threads are now real toggles (D-50), not authored-only
+  await expect(page.getByTestId('policy-extract_factions')).toBeChecked()
+  await expect(page.getByTestId('policy-extract_threads')).toBeChecked()
 
-  // Toggle Places off → the mutation persists it (stub keeps the singleton in memory). The box is
+  // Toggle Factions off → the mutation persists it (stub keeps the singleton in memory). The box is
   // controlled by the query cache + an async PATCH, so click and WAIT for the re-render.
-  const places = page.getByTestId('policy-extract_places')
-  await expect(places).toBeChecked()
-  await places.click()
-  await expect(places).not.toBeChecked()
+  const factions = page.getByTestId('policy-extract_factions')
+  await factions.click()
+  await expect(factions).not.toBeChecked()
   await page.reload()
   await page.getByRole('link', { name: 'Ops' }).click()
-  await expect(page.getByTestId('policy-extract_places')).not.toBeChecked() // refetched from server
+  await expect(page.getByTestId('policy-extract_factions')).not.toBeChecked() // refetched from server
 })
 
 test('ops (M6): a player sees rulesets but usage needs an operator token (D-44)', async ({

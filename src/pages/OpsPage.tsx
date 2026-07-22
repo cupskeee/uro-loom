@@ -21,7 +21,17 @@ const EXTRACTION_CATEGORIES: {
   {
     key: 'extract_places',
     label: 'Places',
-    desc: 'Named locations the scene visits (a tavern, a town, a ruin) become tracked places.',
+    desc: 'Named locations the scene visits (a tavern, a town, a ruin) become tracked places — also created when an actor is located there.',
+  },
+  {
+    key: 'extract_factions',
+    label: 'Factions',
+    desc: 'Named groups (a house, order, guild, church) become tracked factions — also created when an actor is a member of one (D-50).',
+  },
+  {
+    key: 'extract_threads',
+    label: 'Threads',
+    desc: 'Live plots and conflicts named in play become tracked threads. Never deduplicated — two similar plots may legitimately coexist (D-50).',
   },
   {
     key: 'extract_claims',
@@ -38,7 +48,7 @@ function ExtractionPolicyPanel() {
     <div>
       <h2 className="mb-3 text-sm font-semibold text-neutral-200">
         Extraction policy{' '}
-        <span className="text-neutral-500">· what PLAY may create (operator, D-49)</span>
+        <span className="text-neutral-500">· what PLAY may create (operator, D-49/D-50)</span>
       </h2>
       <QueryBoundary query={query}>
         {(policy: ExtractionPolicy) => (
@@ -62,8 +72,9 @@ function ExtractionPolicyPanel() {
               </label>
             ))}
             <div className="border-t border-neutral-800 pt-3 text-xs text-neutral-500">
-              <span className="text-neutral-400">Threads &amp; Factions</span> are authored-only —
-              they come from a world pack (<code>uro world create</code>), not from play.
+              Emergent world is <span className="text-neutral-400">relational</span> (D-50): an
+              actor cascade-creates the faction it belongs to and the place it&rsquo;s in, so two
+              same-named figures of different houses stay distinct.
             </div>
           </Card>
         )}

@@ -6,6 +6,11 @@ All notable changes to Uro Loom are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Extraction policy: Factions + Threads are now real toggles (D-50).** The Ops extraction-policy
+  panel gains **Factions** and **Threads** checkboxes (they were "authored-only" before). The
+  footer note now explains the relational model — an actor cascade-creates the faction it belongs
+  to and the place it's in, so two same-named figures of different houses stay distinct. Pairs with
+  the uro-server D-50 relational extraction.
 - **Role bindings now describe what each engine role does** (D-47/D-48). Every role on the Providers
   page carries a one-line description of its job (narrator, dialogue, extractor, planner, embedder,
   judge, default) — including the embedder's "must be an embedding model" caveat and the dialogue
