@@ -28,6 +28,19 @@ import { Feedback, Submit, TextField } from '../components/forms'
 
 // The engine roles a connection can back (shared with the server's ROLES). `default` is the fallback.
 const ROLES = ['default', 'narrator', 'extractor', 'planner', 'embedder', 'dialogue', 'judge']
+
+// What each engine role does — shown under its binding so an operator knows what to point where.
+const ROLE_DESCRIPTIONS: Record<string, string> = {
+  default: 'Fallback for any role left unbound below.',
+  narrator: 'Writes the scene prose — including NPC speech, unless the dialogue role is bound.',
+  dialogue:
+    'Optional. Bind to voice NPC conversation with a separate (e.g. character-tuned) model — binding it turns speech routing ON. Unbound → NPC lines come from the main narration model.',
+  extractor: 'Pulls structured facts (actors, claims, beliefs) out of each beat.',
+  planner: 'Classifies intent and plans mechanics each beat (requires a bound ruleset).',
+  embedder:
+    'Embeds memories for long-range semantic recall. MUST be an embedding model (openai/local) — Codex/Anthropic have no embedding endpoint.',
+  judge: 'Scores world-authoring probes (uro world probe). Not used during normal play.',
+}
 const PROVIDER_KINDS = ['openai', 'anthropic', 'openai_compat', 'local', 'stub']
 
 /** Map a 403 on any provider write to the operator-token hint (every /providers route is D-44). */
@@ -522,6 +535,7 @@ function RoleRow({ role, binding }: { role: string; binding: RoleBinding | undef
   const unbind = useDeleteRoleBinding()
   const test = useTestConnection()
   const btn = 'text-xs text-neutral-400 hover:text-neutral-200 disabled:opacity-50'
+  const desc = ROLE_DESCRIPTIONS[role]
   return (
     <li className="flex flex-wrap items-center gap-2 text-sm" data-testid="role-row">
       <span className="w-20 text-neutral-300">{role}</span>
@@ -530,6 +544,7 @@ function RoleRow({ role, binding }: { role: string; binding: RoleBinding | undef
           <span className="text-neutral-500">→</span>
           <IdChip>{binding.connection_id}</IdChip>
           <span className="text-neutral-400">{binding.model}</span>
+          {role === 'dialogue' && <Badge tone="green">speech routing on</Badge>}
           <div className="ml-auto flex items-center gap-3">
             <button
               onClick={() => test.mutate({ id: binding.connection_id, model: binding.model })}
@@ -561,6 +576,11 @@ function RoleRow({ role, binding }: { role: string; binding: RoleBinding | undef
         </>
       ) : (
         <span className="text-xs text-neutral-600">— unbound (falls back to default) —</span>
+      )}
+      {desc && (
+        <div className="w-full pl-[5.5rem] text-xs text-neutral-500" data-testid="role-desc">
+          {desc}
+        </div>
       )}
     </li>
   )
