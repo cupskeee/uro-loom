@@ -33,9 +33,11 @@ import {
   refreshConnection,
   testConnection,
   reloadRouter,
+  patchExtractionPolicy,
 } from './endpoints'
 import type {
   CodexAddRequest,
+  ExtractionPolicy,
   CreateCampaignRequest,
   EndCampaignRequest,
   WorldBundle,
@@ -265,5 +267,15 @@ export function useTestConnection() {
   const { connection } = useConnection()
   return useMutation({
     mutationFn: (a: { id: string; model?: string }) => testConnection(connection!, a.id, a.model),
+  })
+}
+
+export function useSetExtractionPolicy() {
+  // PATCH returns the full policy → write it straight into the cache for an immediate toggle.
+  const { connection } = useConnection()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (updates: Partial<ExtractionPolicy>) => patchExtractionPolicy(connection!, updates),
+    onSuccess: (data) => qc.setQueryData(['extraction-policy', connection?.baseUrl], data),
   })
 }

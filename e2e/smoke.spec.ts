@@ -432,6 +432,27 @@ test('ops (M6): operator sees the ruleset registry + usage telemetry', async ({ 
   await expect(page.getByTestId('usage-row')).toContainText('planner')
 })
 
+test('ops (D-49): extraction policy toggles + Claims disclaimer + authored-only note', async ({
+  page,
+}) => {
+  await connect(page) // operator
+  await page.getByRole('link', { name: 'Ops' }).click()
+  const panel = page.getByTestId('extraction-policy')
+  await expect(panel).toBeVisible()
+  await expect(panel).toContainText('NEEDS these for recall') // the Claims/Beliefs disclaimer
+  await expect(panel).toContainText('authored-only') // Threads & Factions note
+
+  // Toggle Places off → the mutation persists it (stub keeps the singleton in memory). The box is
+  // controlled by the query cache + an async PATCH, so click and WAIT for the re-render.
+  const places = page.getByTestId('policy-extract_places')
+  await expect(places).toBeChecked()
+  await places.click()
+  await expect(places).not.toBeChecked()
+  await page.reload()
+  await page.getByRole('link', { name: 'Ops' }).click()
+  await expect(page.getByTestId('policy-extract_places')).not.toBeChecked() // refetched from server
+})
+
 test('ops (M6): a player sees rulesets but usage needs an operator token (D-44)', async ({
   page,
 }) => {
@@ -446,8 +467,8 @@ test('ops (M6): a player sees rulesets but usage needs an operator token (D-44)'
   await page.goto('/ops')
   // Rulesets are public.
   await expect(page.getByTestId('ruleset-card').first()).toBeVisible()
-  // Usage is operator-only → the operator-required panel, no table.
-  await expect(page.getByTestId('operator-required')).toBeVisible()
+  // Usage + extraction policy are operator-only → operator-required panels, no table.
+  await expect(page.getByTestId('operator-required').first()).toBeVisible()
   await expect(page.getByTestId('usage-result')).toHaveCount(0)
 })
 

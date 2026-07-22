@@ -1,9 +1,76 @@
 import { type FormEvent, useState } from 'react'
-import { useRulesets, useUsage } from '../api/queries'
-import type { RulesetInfo, RulesetsResponse, UsageResponse } from '../api/types'
+import { useExtractionPolicy, useRulesets, useUsage } from '../api/queries'
+import { useSetExtractionPolicy } from '../api/mutations'
+import type { ExtractionPolicy, RulesetInfo, RulesetsResponse, UsageResponse } from '../api/types'
 import { QueryBoundary } from '../components/QueryBoundary'
 import { Badge, Card, IdChip, PageHeading } from '../components/ui'
 import { Submit, TextField } from '../components/forms'
+
+// The emergent categories play can create (D-49). `warn` = the engine relies on it (recall).
+const EXTRACTION_CATEGORIES: {
+  key: keyof ExtractionPolicy
+  label: string
+  desc: string
+  warn?: boolean
+}[] = [
+  {
+    key: 'extract_actors',
+    label: 'Actors',
+    desc: 'People who appear in play (an innkeeper, a stranger) become tracked actors.',
+  },
+  {
+    key: 'extract_places',
+    label: 'Places',
+    desc: 'Named locations the scene visits (a tavern, a town, a ruin) become tracked places.',
+  },
+  {
+    key: 'extract_claims',
+    label: 'Claims & Beliefs',
+    desc: 'Facts about the world and who-believes-what. ⚠ The engine NEEDS these for recall — disabling degrades continuity and long-range memory.',
+    warn: true,
+  },
+]
+
+function ExtractionPolicyPanel() {
+  const query = useExtractionPolicy()
+  const set = useSetExtractionPolicy()
+  return (
+    <div>
+      <h2 className="mb-3 text-sm font-semibold text-neutral-200">
+        Extraction policy{' '}
+        <span className="text-neutral-500">· what PLAY may create (operator, D-49)</span>
+      </h2>
+      <QueryBoundary query={query}>
+        {(policy: ExtractionPolicy) => (
+          <Card className="space-y-3 p-4" data-testid="extraction-policy">
+            {EXTRACTION_CATEGORIES.map((c) => (
+              <label key={c.key} className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={policy[c.key]}
+                  disabled={set.isPending}
+                  onChange={(e) => set.mutate({ [c.key]: e.target.checked })}
+                  data-testid={`policy-${c.key}`}
+                  className="mt-1 h-4 w-4 accent-indigo-500"
+                />
+                <div>
+                  <div className="font-medium text-neutral-200">{c.label}</div>
+                  <div className={c.warn ? 'text-xs text-amber-400' : 'text-xs text-neutral-500'}>
+                    {c.desc}
+                  </div>
+                </div>
+              </label>
+            ))}
+            <div className="border-t border-neutral-800 pt-3 text-xs text-neutral-500">
+              <span className="text-neutral-400">Threads &amp; Factions</span> are authored-only —
+              they come from a world pack (<code>uro world create</code>), not from play.
+            </div>
+          </Card>
+        )}
+      </QueryBoundary>
+    </div>
+  )
+}
 
 function RulesetCard({ r }: { r: RulesetInfo }) {
   const props = (r.sheet_schema?.properties ?? {}) as Record<string, unknown>
@@ -146,6 +213,7 @@ export function OpsPage() {
         subtitle="Registered rulesets (public) and LLM-call telemetry (operator). The engine exposes metering; billing/quota is the consumer's job (docs/00)."
       />
       <RulesetViewer />
+      <ExtractionPolicyPanel />
       <UsageDashboard />
     </section>
   )

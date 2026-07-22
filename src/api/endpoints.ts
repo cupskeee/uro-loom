@@ -45,6 +45,7 @@ import type {
   RefreshModelsResponse,
   CodexPollResponse,
   CodexStartResponse,
+  ExtractionPolicy,
   ReloadRouterResponse,
   TestConnectionResponse,
   RevokeTokenRequest,
@@ -433,6 +434,22 @@ export function getUsage(
 ): Promise<UsageResponse> {
   const q = stage ? `?stage=${enc(stage)}` : ''
   return apiFetch<UsageResponse>(conn, `/usage${q}`, { signal })
+}
+
+/** GET /extraction-policy → the emergent-extraction toggles (OPERATOR-only, D-49). */
+export function getExtractionPolicy(
+  conn: Connection,
+  signal?: AbortSignal,
+): Promise<ExtractionPolicy> {
+  return apiFetch<ExtractionPolicy>(conn, '/extraction-policy', { signal })
+}
+
+/** PATCH /extraction-policy → update a subset of the toggles; returns the full policy (D-49). */
+export function patchExtractionPolicy(
+  conn: Connection,
+  updates: Partial<ExtractionPolicy>,
+): Promise<ExtractionPolicy> {
+  return apiFetch<ExtractionPolicy>(conn, '/extraction-policy', { method: 'PATCH', body: updates })
 }
 
 // --- Model-connection registry (D-47, docs/20 — the /providers surface; all OPERATOR-only) -------

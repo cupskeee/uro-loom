@@ -481,6 +481,8 @@ function isOperator(token) {
 // no read returns a secret, deleting a credential UNLINKS connections, deleting a connection
 // cascades its role bindings. No real crypto — the stub keeps the secret aside and never returns it.
 const REGISTRY = { connections: {}, credentials: {}, roles: {}, secrets: {}, n: 0 }
+// D-49: the emergent-extraction policy (instance singleton), all-on by default.
+const STUB_EXTRACTION_POLICY = { extract_actors: true, extract_places: true, extract_claims: true }
 const REGISTRY_ROLES = new Set([
   'default',
   'narrator',
@@ -1061,6 +1063,26 @@ const server = createServer((req, res) => {
         return send(res, 400, { detail: 'invalid json' })
       }
       handleProviders(req.method, p, body, res, token)
+    })
+    return
+  }
+
+  // D-49: GET/PATCH /extraction-policy — emergent-extraction toggles (operator-only).
+  if (p === '/extraction-policy' && (req.method === 'GET' || req.method === 'PATCH')) {
+    if (!isOperator(token)) return send(res, 403, { detail: 'operator token required' })
+    if (req.method === 'GET') return send(res, 200, STUB_EXTRACTION_POLICY)
+    const chunks = []
+    req.on('data', (c) => chunks.push(c))
+    req.on('end', () => {
+      let body
+      try {
+        body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
+      } catch {
+        return send(res, 400, { detail: 'invalid json' })
+      }
+      for (const k of ['extract_actors', 'extract_places', 'extract_claims'])
+        if (k in body) STUB_EXTRACTION_POLICY[k] = !!body[k]
+      send(res, 200, STUB_EXTRACTION_POLICY)
     })
     return
   }

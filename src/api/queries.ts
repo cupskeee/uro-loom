@@ -13,6 +13,7 @@ import {
   getConsistency,
   getEpistemicState,
   getEvents,
+  getExtractionPolicy,
   getLog,
   getRoster,
   getProviders,
@@ -168,6 +169,15 @@ export function useRulesets() {
     queryKey: ['rulesets', connection?.baseUrl],
     enabled: !!connection,
     queryFn: ({ signal }) => getRulesets(connection!, signal),
+  })
+}
+
+export function useExtractionPolicy() {
+  const { connection } = useConnection()
+  return useQuery({
+    queryKey: ['extraction-policy', connection?.baseUrl],
+    enabled: !!connection,
+    queryFn: ({ signal }) => getExtractionPolicy(connection!, signal),
   })
 }
 
