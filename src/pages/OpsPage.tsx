@@ -87,6 +87,15 @@ function UsageDashboard() {
             />
           </div>
           <Submit testid="usage-filter">Filter</Submit>
+          <button
+            type="button"
+            onClick={() => query.refetch()}
+            disabled={query.isFetching}
+            data-testid="usage-refresh"
+            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-50"
+          >
+            {query.isFetching ? 'Refreshing…' : 'Refresh'}
+          </button>
         </form>
       </div>
       <QueryBoundary query={query}>

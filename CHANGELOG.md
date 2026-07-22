@@ -5,6 +5,13 @@ All notable changes to Uro Loom are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+- **Usage telemetry now updates live.** The Ops usage dashboard fetched once and cached, so it
+  showed stale LLM-call counts after you chatted — beats commit over the WS play channel, which
+  never invalidates the query. `useUsage` now polls while the tab is visible (`refetchInterval`,
+  paused when hidden) and refetches on window focus, and the dashboard gained a manual **Refresh**
+  button. (The metering itself was working — the DB was recording calls; only the view was stale.)
+
 ### Added
 - **Providers: Codex (ChatGPT-subscription) OAuth connect (D-47).** A "Connect ChatGPT (Codex)"
   action on the Providers page opens an authorize modal — it shows the device code to enter on
