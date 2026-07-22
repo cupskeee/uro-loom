@@ -508,6 +508,13 @@ export interface UsageResponse {
   by_stage: UsageRow[]
 }
 
+/** GET/PATCH /extraction-policy — which emergent categories play may create (operator, D-49). */
+export interface ExtractionPolicy {
+  extract_actors: boolean
+  extract_places: boolean
+  extract_claims: boolean
+}
+
 // ---- Model-connection registry (D-47, docs/20 — the /providers surface; operator-only) ----------
 
 /** A connected provider endpoint. `cached_models` is populated by a later engine slice (refresh). */

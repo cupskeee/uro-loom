@@ -5,6 +5,14 @@ All notable changes to Uro Loom are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Extraction policy toggles on the Ops page (D-49).** A new operator-only panel controls which
+  EMERGENT categories play may create — **Actors / Places / Claims & Beliefs** — as live checkboxes
+  (a change PATCHes immediately). The **Claims & Beliefs** toggle carries a disclaimer (⚠ the engine
+  NEEDS them for recall — disabling degrades continuity and long-range memory), and a note that
+  **Threads & Factions are authored-only** (from a world pack, not from play). Pairs with the
+  uro-server `/extraction-policy` surface.
+
 ### Fixed
 - **Usage telemetry now updates live.** The Ops usage dashboard fetched once and cached, so it
   showed stale LLM-call counts after you chatted — beats commit over the WS play channel, which
