@@ -418,9 +418,12 @@ test('ops (M6): operator sees the ruleset registry + usage telemetry', async ({ 
     'harm',
   )
 
-  // Usage telemetry (operator) — the total + a per-stage table.
+  // Usage telemetry (operator) — the total + a per-stage table, with a manual Refresh (the view
+  // also polls, since beats commit over WS and never invalidate the query).
   await expect(page.getByTestId('usage-result')).toContainText('total calls')
   await expect(page.getByTestId('usage-row').filter({ hasText: 'narrator' })).toBeVisible()
+  await page.getByTestId('usage-refresh').click()
+  await expect(page.getByTestId('usage-result')).toContainText('total calls')
 
   // Filter to one stage.
   await page.getByTestId('usage-stage').fill('planner')

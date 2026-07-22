@@ -177,6 +177,11 @@ export function useUsage(stage?: string) {
     queryKey: ['usage', connection?.baseUrl, stage ?? null],
     enabled: !!connection,
     queryFn: ({ signal }) => getUsage(connection!, stage, signal),
+    // LLM-call telemetry is live: beats commit over the WS play channel, which never touches the
+    // query client, so without this the dashboard shows stale counts. Poll while the tab is visible
+    // (TanStack pauses the interval when hidden) and refetch on focus; a manual Refresh button too.
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
   })
 }
 
