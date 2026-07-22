@@ -481,8 +481,14 @@ function isOperator(token) {
 // no read returns a secret, deleting a credential UNLINKS connections, deleting a connection
 // cascades its role bindings. No real crypto — the stub keeps the secret aside and never returns it.
 const REGISTRY = { connections: {}, credentials: {}, roles: {}, secrets: {}, n: 0 }
-// D-49: the emergent-extraction policy (instance singleton), all-on by default.
-const STUB_EXTRACTION_POLICY = { extract_actors: true, extract_places: true, extract_claims: true }
+// D-49/D-50: the emergent-extraction policy (instance singleton), all-on by default.
+const STUB_EXTRACTION_POLICY = {
+  extract_actors: true,
+  extract_places: true,
+  extract_factions: true,
+  extract_threads: true,
+  extract_claims: true,
+}
 const REGISTRY_ROLES = new Set([
   'default',
   'narrator',
@@ -1080,7 +1086,13 @@ const server = createServer((req, res) => {
       } catch {
         return send(res, 400, { detail: 'invalid json' })
       }
-      for (const k of ['extract_actors', 'extract_places', 'extract_claims'])
+      for (const k of [
+        'extract_actors',
+        'extract_places',
+        'extract_factions',
+        'extract_threads',
+        'extract_claims',
+      ])
         if (k in body) STUB_EXTRACTION_POLICY[k] = !!body[k]
       send(res, 200, STUB_EXTRACTION_POLICY)
     })

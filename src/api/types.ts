@@ -508,10 +508,12 @@ export interface UsageResponse {
   by_stage: UsageRow[]
 }
 
-/** GET/PATCH /extraction-policy — which emergent categories play may create (operator, D-49). */
+/** GET/PATCH /extraction-policy — which emergent categories play may create (operator, D-49/D-50). */
 export interface ExtractionPolicy {
   extract_actors: boolean
   extract_places: boolean
+  extract_factions: boolean
+  extract_threads: boolean
   extract_claims: boolean
 }
 
