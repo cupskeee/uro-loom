@@ -5,6 +5,13 @@ All notable changes to Uro Loom are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Role bindings now describe what each engine role does** (D-47/D-48). Every role on the Providers
+  page carries a one-line description of its job (narrator, dialogue, extractor, planner, embedder,
+  judge, default) — including the embedder's "must be an embedding model" caveat and the dialogue
+  role's opt-in NPC-speech-routing behavior. A bound `dialogue` role shows a **"speech routing on"**
+  badge (binding it routes NPC conversation through that model; unbound → the narrator voices NPCs).
+
 ### Fixed
 - **Usage telemetry now updates live.** The Ops usage dashboard fetched once and cached, so it
   showed stale LLM-call counts after you chatted — beats commit over the WS play channel, which

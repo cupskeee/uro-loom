@@ -503,6 +503,11 @@ test('providers (M6): refresh discovers models, the role picker uses them, reloa
   await connect(page) // operator
   await page.getByRole('link', { name: 'Providers' }).click()
 
+  // each role carries a description (this PR): the embedder's warns it needs an embedding model
+  await expect(page.getByTestId('role-row').filter({ hasText: 'embedder' })).toContainText(
+    'embedding model',
+  )
+
   // a keyless openai connection (the stub returns canned models)
   await page.getByTestId('conn-name').fill('picker-oai')
   await page.getByTestId('conn-provider').selectOption('openai')
