@@ -24,6 +24,13 @@ All notable changes to Uro Loom are documented here. The format is based on
   uro-server `/extraction-policy` surface.
 
 ### Fixed
+- **Play transcript no longer goes blank on refresh.** The Play page folded only the live WS
+  stream, which carries beats from the moment you connect onward — so reloading the page (or
+  reconnecting) started with an empty transcript even though the beats were durably persisted. The
+  session now **hydrates from the chronicle** (`GET /campaigns/{id}/chronicle`, last 100 beats,
+  oldest-first) once on connect, then the live stream appends new beats on top. Hydration runs once
+  per campaign and de-dupes against any beat that streamed in during the fetch, so nothing doubles.
+  (The server does not replay history on WS-connect, by design — the client owns this.)
 - **Usage telemetry now updates live.** The Ops usage dashboard fetched once and cached, so it
   showed stale LLM-call counts after you chatted — beats commit over the WS play channel, which
   never invalidates the query. `useUsage` now polls while the tab is visible (`refetchInterval`,
