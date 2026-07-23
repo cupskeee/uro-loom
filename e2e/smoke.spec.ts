@@ -98,13 +98,17 @@ test('play: an intent streams a beat; table-talk stays on the non-canon lane', a
   await page.goto('/campaigns/cmp_ashfall/play')
 
   await expect(page.getByTestId('play-panel')).toBeVisible()
+  // The transcript hydrates from persisted history, so it is NOT blank on load — a refresh
+  // shows prior beats (the WS only streams from now).
+  await expect(page.getByText(/The caravan never reached Vel/)).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByTestId('beat-entry')).toHaveCount(2)
   // The socket opens → the intent box enables.
   await expect(page.getByTestId('intent-input')).toBeEnabled({ timeout: 10_000 })
 
-  // Send an intent → a beat entry appears and its narration streams to completion.
+  // Send an intent → a NEW beat entry appears (3rd) and its narration streams to completion.
   await page.getByTestId('intent-input').fill('look around the tavern')
   await page.getByTestId('intent-send').click()
-  await expect(page.getByTestId('beat-entry')).toBeVisible()
+  await expect(page.getByTestId('beat-entry')).toHaveCount(3)
   await expect(page.getByText(/Shadows lengthen/)).toBeVisible({ timeout: 10_000 })
 
   // Table-talk lands on the non-canon lane (a talk entry), never as a beat.

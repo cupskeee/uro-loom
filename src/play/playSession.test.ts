@@ -78,4 +78,55 @@ describe('playReducer', () => {
     const dirty = fold([{ type: 'participant_joined', participant_id: 'a' }])
     expect(playReducer(dirty, { type: '_reset' })).toEqual(initialPlayState)
   })
+
+  it('_hydrate seeds committed beats from history (oldest-first), so a refresh is not blank', () => {
+    const s = playReducer(initialPlayState, {
+      type: '_hydrate',
+      beats: [
+        { participant: 'p1', intent: 'enter', narration: 'You step into the tavern.' },
+        { participant: 'p1', intent: 'ask', narration: 'The barkeep nods.' },
+      ],
+    })
+    expect(s.hydrated).toBe(true)
+    expect(s.entries).toHaveLength(2)
+    expect(s.entries[0]).toMatchObject({
+      kind: 'beat',
+      narration: 'You step into the tavern.',
+      status: 'committed',
+    })
+    expect(s.entries.map((e) => e.id)).toEqual([1, 2])
+    expect(s.nextId).toBe(3)
+  })
+
+  it('_hydrate runs once — a second call is a no-op (no duplicate history)', () => {
+    const beats = [{ participant: 'p1', intent: 'x', narration: 'A.' }]
+    const once = playReducer(initialPlayState, { type: '_hydrate', beats })
+    const twice = playReducer(once, { type: '_hydrate', beats })
+    expect(twice).toBe(once)
+  })
+
+  it('_hydrate prepends history before a beat that streamed during the fetch race, without doubling it', () => {
+    // A live beat arrived before the chronicle fetch resolved.
+    const live = fold([
+      {
+        type: 'beat_committed',
+        participant_id: 'p1',
+        intent: 'ask',
+        narration: 'The barkeep nods.',
+      },
+    ])
+    const s = playReducer(live, {
+      type: '_hydrate',
+      beats: [
+        { participant: 'p1', intent: 'enter', narration: 'You step into the tavern.' },
+        // same as the live one — must be de-duped, not shown twice
+        { participant: 'p1', intent: 'ask', narration: 'The barkeep nods.' },
+      ],
+    })
+    const narrations = s.entries
+      .filter((e) => e.kind === 'beat')
+      .map((e) => (e as { narration: string }).narration)
+    expect(narrations).toEqual(['You step into the tavern.', 'The barkeep nods.'])
+    expect(s.entries.map((e) => e.id)).toEqual([1, 2])
+  })
 })
